@@ -1,0 +1,8 @@
+{
+  "name": "Universidade Tobas - SGHD",
+  "description": "Sistema de Gestão de Horários de Docentes da Universidade Tobas - planeamento, criação, gestão, validação de conflitos e consulta de horários académicos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
