@@ -3,7 +3,7 @@ import {
   Calendar, Plus, Filter, Search, Sparkles, Printer, 
   AlertTriangle, CheckCircle2, ChevronRight, Edit3, Trash2, 
   Clock, School, User as UserIcon, Users, BookOpen, Layers, Check, 
-  RotateCcw, Download, X
+  RotateCcw, Download, X, Shield, ShieldCheck, Send, Award, FileCheck
 } from 'lucide-react';
 import { 
   ScheduleItem, Teacher, Subject, ClassGroup, 
@@ -59,8 +59,16 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
 }) => {
   const isDocente = userRole === 'docente';
   const isEstudante = userRole === 'estudante';
-  const canEdit = ['admin', 'gestor'].includes(userRole);
-  const canApprove = ['admin', 'gestor', 'coordenador'].includes(userRole);
+  const isDiretor = userRole === 'diretor';
+  const isCoordenador = userRole === 'coordenador';
+  const isAdmin = userRole === 'admin';
+
+  // Coordenador de Curso (Diretor de Curso) cria horários
+  const canEdit = ['admin', 'gestor', 'coordenador'].includes(userRole);
+  
+  // Diretor de Departamento valida horários
+  const canValidate = ['admin', 'gestor', 'diretor'].includes(userRole);
+  const canApprove = ['admin', 'gestor', 'diretor'].includes(userRole);
 
   // Determine initial view filter based on role
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -200,6 +208,14 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
     }
   };
 
+  const pendingValidationCount = useMemo(() => {
+    return schedules.filter(s => s.status === 'Em validação').length;
+  }, [schedules]);
+
+  const draftCount = useMemo(() => {
+    return schedules.filter(s => s.status === 'Rascunho').length;
+  }, [schedules]);
+
   return (
     <div className="space-y-6">
       
@@ -207,10 +223,22 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-2xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
                 Módulo Principal (PDF Seções 12, 18, 19)
               </span>
+              {isDiretor && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Direção do Departamento • Validação de Horários</span>
+                </span>
+              )}
+              {isCoordenador && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5" />
+                  <span>Coordenação de Curso • Criação de Horários</span>
+                </span>
+              )}
               <span className="text-xs text-slate-500 font-medium">
                 {filteredSchedules.length} aulas exibidas
               </span>
@@ -219,7 +247,7 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
               {isDocente ? 'Meu Horário Semanal' : isEstudante ? 'Horário das Aulas da Turma' : 'Gestão e Consulta de Horários'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Grade horária interativa com validação instantânea de conflitos e fluxos de aprovação.
+              Grade horária interativa com validação instantânea de conflitos e fluxos de aprovação institucional.
             </p>
           </div>
 
@@ -237,12 +265,32 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
               <span>Imprimir / PDF</span>
             </button>
 
-            {/* Coordinator/Manager Publish & Approve Actions */}
-            {canApprove && (
+            {/* Coordinator Submit Schedule to Director */}
+            {isCoordenador && (
+              <button
+                id="btn-coord-submit-for-validation"
+                onClick={() => {
+                  const draftIds = schedules.filter(s => s.status === 'Rascunho').map(s => s.id);
+                  if (draftIds.length > 0) {
+                    onBulkUpdateStatus('Em validação', draftIds);
+                  } else {
+                    onBulkUpdateStatus('Em validação');
+                  }
+                }}
+                className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                title="Submeter propostas de horário elaboradas para validação do Diretor de Departamento"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Submeter para Validação do Diretor ({draftCount})</span>
+              </button>
+            )}
+
+            {/* Department Director / Admin Validation & Publish Action */}
+            {canValidate && (
               <button
                 id="btn-publish-all-schedules"
                 onClick={() => onBulkUpdateStatus('Publicado')}
-                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-xs"
+                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
                 title="Publicar todas as aulas aprovadas como horário oficial"
               >
                 <CheckCircle2 className="w-4 h-4" />
@@ -507,6 +555,70 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
 
       </div>
 
+      {/* Department Director & Admin Validation Control Banner */}
+      {canValidate && (
+        <div className="bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 text-white p-5 rounded-2xl border border-purple-800/60 shadow-md">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-400/30 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-purple-300" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-white tracking-tight">
+                    Validação e Homologação da Direção do Departamento
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                    Competência do Diretor de Departamento
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  {pendingValidationCount > 0 ? (
+                    <span>Existem <strong className="text-amber-300">{pendingValidationCount} aula(s) submetidas</strong> pelo Coordenador de Curso aguardando validação institucional.</span>
+                  ) : (
+                    <span>Todas as grades horárias submetidas estão homologadas ou em planeamento preliminar.</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center flex-wrap gap-2 shrink-0">
+              <button
+                id="btn-validate-pending-schedules"
+                onClick={() => onBulkUpdateStatus('Aprovado')}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                title="Validar e aprovar propostas de horário"
+              >
+                <Check className="w-4 h-4" />
+                <span>Validar Horários ({pendingValidationCount})</span>
+              </button>
+
+              <button
+                id="btn-publish-official-schedules"
+                onClick={() => onBulkUpdateStatus('Publicado')}
+                className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                title="Homologar e Publicar como Horário Oficial Institucional"
+              >
+                <FileCheck className="w-4 h-4" />
+                <span>Homologar e Publicar</span>
+              </button>
+
+              {pendingValidationCount > 0 && (
+                <button
+                  id="btn-request-changes-schedules"
+                  onClick={() => onBulkUpdateStatus('Rascunho')}
+                  className="px-3 py-2 rounded-xl border border-purple-400/40 hover:bg-purple-900/40 text-purple-200 font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Devolver proposta com solicitação de revisão ao Coordenador do Curso"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Solicitar Ajustes</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TIMETABLE WEEKLY GRID (PDF Page 18-19) */}
       {displayType === 'grid' ? (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
@@ -607,6 +719,26 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
                                         </span>
 
                                         <div className="flex items-center gap-1">
+                                          {/* Director Validation Actions on Card */}
+                                          {canValidate && lesson.status === 'Em validação' && (
+                                            <>
+                                              <button
+                                                onClick={() => onSaveSchedule({ id: lesson.id, status: 'Aprovado' })}
+                                                className="p-1 hover:bg-emerald-100 text-emerald-700 bg-emerald-50 rounded transition-colors cursor-pointer"
+                                                title="Validar e Aprovar Horário (Diretor de Departamento)"
+                                              >
+                                                <Check className="w-3 h-3" />
+                                              </button>
+                                              <button
+                                                onClick={() => onSaveSchedule({ id: lesson.id, status: 'Rascunho' })}
+                                                className="p-1 hover:bg-amber-100 text-amber-700 bg-amber-50 rounded transition-colors cursor-pointer"
+                                                title="Solicitar Ajustes ao Coordenador"
+                                              >
+                                                <RotateCcw className="w-3 h-3" />
+                                              </button>
+                                            </>
+                                          )}
+
                                           {canEdit && (
                                             <>
                                               <button
@@ -734,6 +866,28 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* Director Validation Actions in Table */}
+                          {canValidate && lesson.status === 'Em validação' && (
+                            <>
+                              <button
+                                onClick={() => onSaveSchedule({ id: lesson.id, status: 'Aprovado' })}
+                                className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-[11px] border border-emerald-200 flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Validar e Aprovar Horário"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Validar</span>
+                              </button>
+                              <button
+                                onClick={() => onSaveSchedule({ id: lesson.id, status: 'Rascunho' })}
+                                className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium text-[11px] border border-amber-200 flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Solicitar Ajustes"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                <span>Ajuste</span>
+                              </button>
+                            </>
+                          )}
+
                           {canEdit && (
                             <>
                               <button

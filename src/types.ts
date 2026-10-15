@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'gestor' | 'coordenador' | 'docente' | 'estudante';
+export type UserRole = 'admin' | 'gestor' | 'diretor' | 'coordenador' | 'docente' | 'estudante';
 
 export interface User {
   id: string;
@@ -11,6 +11,10 @@ export interface User {
   avatarUrl?: string;
   teacherId?: string;
   classId?: string;
+  departmentId?: string;
+  courseId?: string;
+  appointedBy?: string;
+  appointedAt?: string;
 }
 
 export type TeacherStatus = 'Ativo' | 'Inativo' | 'Suspenso' | 'Em licença';
@@ -41,7 +45,12 @@ export interface Department {
   code: string;
   name: string;
   description: string;
-  manager: string; // Responsável
+  manager: string; // Responsável / Diretor do Departamento
+  director?: string; // Nome do Diretor do Departamento (Adicionado exclusivamente pelo Admin)
+  directorId?: string; // ID do utilizador/docente diretor
+  directorEmail?: string;
+  appointedBy?: string; // Admin que realizou a nomeação
+  appointedAt?: string;
   status: 'Ativo' | 'Inativo';
 }
 
@@ -53,6 +62,11 @@ export interface Course {
   degree: 'Licenciatura' | 'Mestrado' | 'Doutoramento' | 'Pós-Graduação';
   duration: string; // e.g. '3 Anos'
   semesterCount: number;
+  coordinator?: string; // Nome do Coordenador do Curso (Adicionado exclusivamente pelo Admin)
+  coordinatorId?: string; // ID do utilizador/docente coordenador
+  coordinatorEmail?: string;
+  appointedBy?: string; // Admin que realizou a nomeação
+  appointedAt?: string;
   status: 'Ativo' | 'Inativo';
 }
 

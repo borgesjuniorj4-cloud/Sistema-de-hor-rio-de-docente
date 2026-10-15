@@ -3,7 +3,9 @@ import {
   Shield, Download, Upload, Database, HardDrive, FileJson, 
   CheckCircle2, AlertTriangle, RotateCcw, RefreshCw, Layers, 
   Users, Calendar, School, BookOpen, Clock, FileText, 
-  Check, Copy, Eye, ArrowRight, Sparkles, Building2, HelpCircle
+  Check, Copy, Eye, ArrowRight, Sparkles, Building2, HelpCircle,
+  Award, GraduationCap, UserCheck, Trash2, Edit3, X, UserPlus, Lock,
+  ShieldCheck, LogIn
 } from 'lucide-react';
 import { 
   User, Teacher, Department, Course, Subject, 
@@ -31,6 +33,25 @@ interface AdminViewProps {
   onResetToDefaults: () => void;
   onLogAudit: (action: string, entity: string, entityId: string, details: string) => void;
   onNotify: (title: string, message: string, type: 'success' | 'warning' | 'alert' | 'info') => void;
+  onAppointDirector?: (
+    departmentId: string, 
+    directorName: string, 
+    directorEmail?: string, 
+    teacherId?: string,
+    customPassword?: string,
+    teacherCategory?: string
+  ) => { user: User; teacher: Teacher; password: string } | null | void;
+  onAppointCoordinator?: (
+    courseId: string, 
+    coordinatorName: string, 
+    coordinatorEmail?: string, 
+    teacherId?: string,
+    customPassword?: string,
+    teacherCategory?: string
+  ) => { user: User; teacher: Teacher; password: string } | null | void;
+  onRevokeDirector?: (departmentId: string) => void;
+  onRevokeCoordinator?: (courseId: string) => void;
+  onSwitchUser?: (user: User) => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -52,8 +73,32 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onResetToDefaults,
   onLogAudit,
   onNotify,
+  onAppointDirector,
+  onAppointCoordinator,
+  onRevokeDirector,
+  onRevokeCoordinator,
+  onSwitchUser,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'backup_restore' | 'storage_inspector' | 'system_info'>('backup_restore');
+  const [activeSubTab, setActiveSubTab] = useState<'leadership' | 'backup_restore' | 'storage_inspector' | 'system_info'>('leadership');
+  
+  // Leadership appointment modal states
+  const [directorModalDept, setDirectorModalDept] = useState<Department | null>(null);
+  const [coordinatorModalCourse, setCoordinatorModalCourse] = useState<Course | null>(null);
+  const [appointeeName, setAppointeeName] = useState('');
+  const [appointeeEmail, setAppointeeEmail] = useState('');
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [appointeePassword, setAppointeePassword] = useState('diretor123');
+  const [appointeeCategory, setAppointeeCategory] = useState('Professor Catedrático');
+  const [newCredentialsModal, setNewCredentialsModal] = useState<{
+    role: 'diretor' | 'coordenador';
+    roleTitle: string;
+    targetName: string;
+    teacherName: string;
+    email: string;
+    password: string;
+    user?: User;
+  } | null>(null);
+  const [copiedAppointeeCredentials, setCopiedAppointeeCredentials] = useState(false);
   
   // Storage statistics
   const [storageStats, setStorageStats] = useState(() => StorageService.getStorageStatistics());
@@ -401,13 +446,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
       </div>
 
       {/* Navigation Subtabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2 overflow-x-auto">
+        <button
+          id="tab-admin-leadership"
+          onClick={() => setActiveSubTab('leadership')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer ${
+            activeSubTab === 'leadership'
+              ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Building2 className="w-4 h-4 text-amber-300" />
+          <span>Diretores & Coordenadores (Exclusivo Admin)</span>
+        </button>
         <button
           id="tab-admin-backup-restore"
           onClick={() => setActiveSubTab('backup_restore')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer ${
             activeSubTab === 'backup_restore'
-              ? 'bg-indigo-600 text-white font-semibold'
+              ? 'bg-indigo-600 text-white font-semibold shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -417,9 +474,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <button
           id="tab-admin-storage-inspector"
           onClick={() => setActiveSubTab('storage_inspector')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer ${
             activeSubTab === 'storage_inspector'
-              ? 'bg-indigo-600 text-white font-semibold'
+              ? 'bg-indigo-600 text-white font-semibold shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -429,9 +486,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <button
           id="tab-admin-system-info"
           onClick={() => setActiveSubTab('system_info')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer ${
             activeSubTab === 'system_info'
-              ? 'bg-indigo-600 text-white font-semibold'
+              ? 'bg-indigo-600 text-white font-semibold shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
@@ -439,6 +496,265 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <span>Informações do Sistema</span>
         </button>
       </div>
+
+      {/* TAB: LEADERSHIP (DIRETORES & COORDENADORES - EXCLUSIVO ADMIN) */}
+      {activeSubTab === 'leadership' && (
+        <div className="space-y-6 animate-in fade-in duration-150">
+          {/* Statutory Policy Card */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white p-5 rounded-2xl border border-indigo-800/60 shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center shrink-0">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-bold text-white">Nomeação de Diretores de Departamento e Coordenadores de Curso</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                      Competência Exclusiva do Administrador
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 max-w-3xl">
+                    Em conformidade com as regras institucionais da Universidade Tobas, a adição, nomeação e destituição dos 
+                    <strong> Diretores de Departamento</strong> e <strong>Coordenadores de Curso</strong> é efetuada exclusivamente 
+                    pela conta de Administrador. A nomeação atribui as permissões estatutárias de gestão académica e credenciais institucionais.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  id="btn-admin-appoint-director-quick"
+                  onClick={() => {
+                    const first = departments.find(d => !d.director && !d.manager) || departments[0];
+                    if (first) {
+                      setDirectorModalDept(first);
+                      setAppointeeName('');
+                      setAppointeeEmail('');
+                      setSelectedTeacherId('');
+                    }
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Nomear Diretor</span>
+                </button>
+                <button
+                  id="btn-admin-appoint-coord-quick"
+                  onClick={() => {
+                    const first = courses.find(c => !c.coordinator) || courses[0];
+                    if (first) {
+                      setCoordinatorModalCourse(first);
+                      setAppointeeName('');
+                      setAppointeeEmail('');
+                      setSelectedTeacherId('');
+                    }
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>Nomear Coordenador</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 1: Diretores de Departamento */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-2xs">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">Diretores de Departamento</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {departments.filter(d => Boolean(d.director || d.manager)).length} de {departments.length} departamentos com diretor nomeado
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-[11px] uppercase">
+                  <tr>
+                    <th className="py-2.5 px-3">Código</th>
+                    <th className="py-2.5 px-3">Departamento</th>
+                    <th className="py-2.5 px-3">Diretor em Funções</th>
+                    <th className="py-2.5 px-3">E-mail Institucional</th>
+                    <th className="py-2.5 px-3">Nomeação</th>
+                    <th className="py-2.5 px-3 text-right">Ações do Admin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {departments.map(dept => {
+                    const currentDirector = dept.director || dept.manager;
+                    return (
+                      <tr key={dept.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="py-3 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">{dept.code}</td>
+                        <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">{dept.name}</td>
+                        <td className="py-3 px-3">
+                          {currentDirector ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 flex items-center justify-center font-bold text-[10px]">
+                                <Shield className="w-3 h-3" />
+                              </div>
+                              <span className="font-bold text-slate-900 dark:text-white">{currentDirector}</span>
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-medium">
+                              Vago (Pendente)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 dark:text-slate-400">
+                          {dept.directorEmail || `${dept.code.toLowerCase()}@instituicao.edu`}
+                        </td>
+                        <td className="py-3 px-3 text-slate-500 text-[11px]">
+                          {dept.appointedBy ? (
+                            <span>{dept.appointedBy}</span>
+                          ) : (
+                            <span className="text-slate-400">Padrão institucional</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              id={`btn-appoint-dir-${dept.id}`}
+                              onClick={() => {
+                                setDirectorModalDept(dept);
+                                setAppointeeName(currentDirector || '');
+                                setAppointeeEmail(dept.directorEmail || '');
+                                setSelectedTeacherId(dept.directorId || '');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] flex items-center gap-1 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                              title="Nomear ou substituir o Diretor"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>{currentDirector ? 'Alterar' : 'Nomear'}</span>
+                            </button>
+                            {currentDirector && onRevokeDirector && (
+                              <button
+                                id={`btn-revoke-dir-${dept.id}`}
+                                onClick={() => onRevokeDirector(dept.id)}
+                                className="px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/80 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 text-[11px] font-medium transition-colors cursor-pointer"
+                                title="Revogar o cargo de Diretor"
+                              >
+                                Revogar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section 2: Coordenadores de Curso */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-2xs">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <GraduationCap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">Coordenadores de Curso</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {courses.filter(c => Boolean(c.coordinator)).length} de {courses.length} cursos com coordenador nomeado
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-[11px] uppercase">
+                  <tr>
+                    <th className="py-2.5 px-3">Código</th>
+                    <th className="py-2.5 px-3">Curso & Grau</th>
+                    <th className="py-2.5 px-3">Departamento</th>
+                    <th className="py-2.5 px-3">Coordenador em Funções</th>
+                    <th className="py-2.5 px-3">E-mail Institucional</th>
+                    <th className="py-2.5 px-3">Nomeação</th>
+                    <th className="py-2.5 px-3 text-right">Ações do Admin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {courses.map(course => {
+                    const dept = departments.find(d => d.id === course.departmentId);
+                    return (
+                      <tr key={course.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="py-3 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">{course.code}</td>
+                        <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
+                          <div>{course.name}</div>
+                          <div className="text-[10px] text-slate-500 font-normal">{course.degree} • {course.duration}</div>
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 dark:text-slate-400">{dept?.name || '—'}</td>
+                        <td className="py-3 px-3">
+                          {course.coordinator ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 flex items-center justify-center font-bold text-[10px]">
+                                <Award className="w-3 h-3" />
+                              </div>
+                              <span className="font-bold text-slate-900 dark:text-white">{course.coordinator}</span>
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-medium">
+                              Vago (Pendente)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 dark:text-slate-400">
+                          {course.coordinatorEmail || `${course.code.toLowerCase()}@instituicao.edu`}
+                        </td>
+                        <td className="py-3 px-3 text-slate-500 text-[11px]">
+                          {course.appointedBy ? (
+                            <span>{course.appointedBy}</span>
+                          ) : (
+                            <span className="text-slate-400">Padrão institucional</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              id={`btn-appoint-coord-${course.id}`}
+                              onClick={() => {
+                                setCoordinatorModalCourse(course);
+                                setAppointeeName(course.coordinator || '');
+                                setAppointeeEmail(course.coordinatorEmail || '');
+                                setSelectedTeacherId(course.coordinatorId || '');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] flex items-center gap-1 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
+                              title="Nomear ou substituir o Coordenador"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>{course.coordinator ? 'Alterar' : 'Nomear'}</span>
+                            </button>
+                            {course.coordinator && onRevokeCoordinator && (
+                              <button
+                                id={`btn-revoke-coord-${course.id}`}
+                                onClick={() => onRevokeCoordinator(course.id)}
+                                className="px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/80 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 text-[11px] font-medium transition-colors cursor-pointer"
+                                title="Revogar o cargo de Coordenador"
+                              >
+                                Revogar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: BACKUP & RESTORE */}
       {activeSubTab === 'backup_restore' && (
@@ -948,6 +1264,502 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
               >
                 Sim, Repor Dados
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NOMEAR / ALTERAR DIRETOR DE DEPARTAMENTO (EXCLUSIVO ADMIN) */}
+      {directorModalDept && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-100 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-indigo-200 dark:border-indigo-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                    Nomear Diretor de Departamento
+                  </h3>
+                  <p className="text-[11px] text-purple-600 font-medium">Competência Exclusiva do Administrador</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDirectorModalDept(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 p-3 bg-indigo-50/60 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-xs">
+              <div className="font-semibold text-indigo-950 dark:text-indigo-200">{directorModalDept.name} ({directorModalDept.code})</div>
+              <div className="text-[11px] text-indigo-700 dark:text-indigo-300 mt-0.5">
+                Diretor Atual: <strong>{directorModalDept.director || directorModalDept.manager || 'Nenhum nomeado'}</strong>
+              </div>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                if (onAppointDirector && directorModalDept) {
+                  const res = onAppointDirector(
+                    directorModalDept.id,
+                    appointeeName.trim(),
+                    appointeeEmail.trim(),
+                    selectedTeacherId || undefined,
+                    appointeePassword.trim() || undefined,
+                    appointeeCategory
+                  );
+                  setDirectorModalDept(null);
+                  if (res && typeof res === 'object') {
+                    setNewCredentialsModal({
+                      role: 'diretor',
+                      roleTitle: `Diretor do ${directorModalDept.name}`,
+                      targetName: directorModalDept.name,
+                      teacherName: res.teacher?.name || appointeeName,
+                      email: res.user?.email || appointeeEmail,
+                      password: res.password,
+                      user: res.user,
+                    });
+                  }
+                } else {
+                  setDirectorModalDept(null);
+                }
+              }}
+              className="mt-4 space-y-3.5 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                  Vincular a Docente/Professor Existente:
+                </label>
+                <select
+                  value={selectedTeacherId}
+                  onChange={e => {
+                    const tId = e.target.value;
+                    setSelectedTeacherId(tId);
+                    const t = teachers.find(item => item.id === tId);
+                    if (t) {
+                      setAppointeeName(t.name);
+                      setAppointeeEmail(t.email);
+                      setAppointeeCategory(t.category);
+                    }
+                  }}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                >
+                  <option value="">-- Registar Novo Professor / Docente --</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.category} • {departments.find(d => d.id === t.departmentId)?.code || 'UT'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                  Nome Completo do Professor / Diretor: <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ex.: Prof. Dr. Manuel Cardoso"
+                  value={appointeeName}
+                  onChange={e => setAppointeeName(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                    E-mail Institucional (Login):
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="ex.: diretor.inf@instituicao.edu"
+                    value={appointeeEmail}
+                    onChange={e => setAppointeeEmail(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                    Categoria do Docente:
+                  </label>
+                  <select
+                    value={appointeeCategory}
+                    onChange={e => setAppointeeCategory(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  >
+                    <option value="Professor Catedrático">Professor Catedrático</option>
+                    <option value="Professor Associado">Professor Associado</option>
+                    <option value="Professor Auxiliar">Professor Auxiliar</option>
+                    <option value="Professor Convidado">Professor Convidado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                    Palavra-passe de Acesso Inicial:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz';
+                      let code = '';
+                      for (let i = 0; i < 6; i++) code += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                      setAppointeePassword(`Dir#${code}`);
+                    }}
+                    className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold cursor-pointer"
+                  >
+                    Gerar Senha Segura
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="ex.: diretor123"
+                  value={appointeePassword}
+                  onChange={e => setAppointeePassword(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-800 text-[11px] text-purple-900 dark:text-purple-300 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Requisitos Estatutários Obrigatórios:</span>
+                </div>
+                <div>
+                  • O Diretor de Departamento é obrigatoriamente integrado como <strong>Professor/Docente</strong> no sistema.
+                </div>
+                <div>
+                  • Recebe credenciais ativas e a prerrogativa de <strong>validar e homologar os horários</strong> departamentais.
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDirectorModalDept(null)}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!appointeeName.trim()}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  Confirmar Nomeação de Diretor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NOMEAR / ALTERAR COORDENADOR DE CURSO (EXCLUSIVO ADMIN) */}
+      {coordinatorModalCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-100 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-emerald-200 dark:border-emerald-900">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                    Nomear Coordenador de Curso
+                  </h3>
+                  <p className="text-[11px] text-emerald-600 font-medium">Competência Exclusiva do Administrador</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCoordinatorModalCourse(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 p-3 bg-emerald-50/60 dark:bg-emerald-950/40 rounded-xl border border-emerald-100 dark:border-emerald-900/60 text-xs">
+              <div className="font-semibold text-emerald-950 dark:text-emerald-200">
+                {coordinatorModalCourse.name} ({coordinatorModalCourse.code} • {coordinatorModalCourse.degree})
+              </div>
+              <div className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">
+                Coordenador Atual: <strong>{coordinatorModalCourse.coordinator || 'Nenhum nomeado'}</strong>
+              </div>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                if (onAppointCoordinator && coordinatorModalCourse) {
+                  const res = onAppointCoordinator(
+                    coordinatorModalCourse.id,
+                    appointeeName.trim(),
+                    appointeeEmail.trim(),
+                    selectedTeacherId || undefined,
+                    appointeePassword.trim() || undefined,
+                    appointeeCategory
+                  );
+                  setCoordinatorModalCourse(null);
+                  if (res && typeof res === 'object') {
+                    setNewCredentialsModal({
+                      role: 'coordenador',
+                      roleTitle: `Coordenador de ${coordinatorModalCourse.name}`,
+                      targetName: coordinatorModalCourse.name,
+                      teacherName: res.teacher?.name || appointeeName,
+                      email: res.user?.email || appointeeEmail,
+                      password: res.password,
+                      user: res.user,
+                    });
+                  }
+                } else {
+                  setCoordinatorModalCourse(null);
+                }
+              }}
+              className="mt-4 space-y-3.5 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                  Vincular a Docente/Professor Existente:
+                </label>
+                <select
+                  value={selectedTeacherId}
+                  onChange={e => {
+                    const tId = e.target.value;
+                    setSelectedTeacherId(tId);
+                    const t = teachers.find(item => item.id === tId);
+                    if (t) {
+                      setAppointeeName(t.name);
+                      setAppointeeEmail(t.email);
+                      setAppointeeCategory(t.category);
+                    }
+                  }}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                >
+                  <option value="">-- Registar Novo Professor / Docente --</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.category} • {departments.find(d => d.id === t.departmentId)?.code || 'UT'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                  Nome Completo do Professor / Coordenador: <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ex.: Prof. Dr. Fernando Ramos"
+                  value={appointeeName}
+                  onChange={e => setAppointeeName(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                    E-mail Institucional (Login):
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="ex.: coordenador.inf@instituicao.edu"
+                    value={appointeeEmail}
+                    onChange={e => setAppointeeEmail(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                    Categoria do Docente:
+                  </label>
+                  <select
+                    value={appointeeCategory}
+                    onChange={e => setAppointeeCategory(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  >
+                    <option value="Professor Associado">Professor Associado</option>
+                    <option value="Professor Auxiliar">Professor Auxiliar</option>
+                    <option value="Professor Catedrático">Professor Catedrático</option>
+                    <option value="Professor Convidado">Professor Convidado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-800 dark:text-slate-200">
+                    Palavra-passe de Acesso Inicial:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz';
+                      let code = '';
+                      for (let i = 0; i < 6; i++) code += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                      setAppointeePassword(`Crd#${code}`);
+                    }}
+                    className="text-[10px] text-emerald-600 hover:text-emerald-700 font-semibold cursor-pointer"
+                  >
+                    Gerar Senha Segura
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="ex.: coord123"
+                  value={appointeePassword}
+                  onChange={e => setAppointeePassword(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-900 dark:text-emerald-300 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Requisitos Estatutários Obrigatórios:</span>
+                </div>
+                <div>
+                  • O Coordenador de Curso é obrigatoriamente cadastrado como <strong>Professor/Docente</strong> no sistema.
+                </div>
+                <div>
+                  • Recebe credenciais de acesso para <strong>criar e organizar horários</strong> e <strong>adicionar docentes</strong> ao curso.
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCoordinatorModalCourse(null)}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!appointeeName.trim()}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  Confirmar Nomeação de Coordenador
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREDENCIAIS DE ACESSO DO DIRETOR / COORDENADOR NOMEADO */}
+      {newCredentialsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-indigo-200 dark:border-indigo-800">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    Credenciais de Acesso Atribuídas
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    Conta Ativa
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  A nomeação foi registada e a conta de acesso ao sistema foi provisionada com sucesso.
+                </p>
+              </div>
+              <button
+                onClick={() => setNewCredentialsModal(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 font-medium">Cargo Institucional:</span>
+                <span className="font-bold text-indigo-700 dark:text-indigo-400">{newCredentialsModal.roleTitle}</span>
+              </div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 font-medium">Professor Titular:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{newCredentialsModal.teacherName}</span>
+              </div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500 font-medium">E-mail (Login):</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white select-all">{newCredentialsModal.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Palavra-passe:</span>
+                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 select-all">{newCredentialsModal.password}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-[11px] text-indigo-900 dark:text-indigo-300">
+              {newCredentialsModal.role === 'diretor' ? (
+                <span>O Diretor pode agora aceder ao sistema para <strong>validar e homologar os horários</strong> deste departamento.</span>
+              ) : (
+                <span>O Coordenador pode agora aceder ao sistema para <strong>criar os horários</strong> e <strong>adicionar docentes</strong> ao curso.</span>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-col sm:flex-row items-center gap-2">
+              <button
+                onClick={() => {
+                  const text = `Credenciais SGHD Universidade Tobas\nCargo: ${newCredentialsModal.roleTitle}\nDocente: ${newCredentialsModal.teacherName}\nLogin: ${newCredentialsModal.email}\nSenha: ${newCredentialsModal.password}`;
+                  navigator.clipboard.writeText(text);
+                  setCopiedAppointeeCredentials(true);
+                  setTimeout(() => setCopiedAppointeeCredentials(false), 2500);
+                }}
+                className="w-full sm:flex-1 py-2 px-3 rounded-xl border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copiedAppointeeCredentials ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Copiado com Sucesso!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copiar Credenciais</span>
+                  </>
+                )}
+              </button>
+
+              {onSwitchUser && newCredentialsModal.user && (
+                <button
+                  onClick={() => {
+                    const u = newCredentialsModal.user!;
+                    setNewCredentialsModal(null);
+                    onSwitchUser(u);
+                  }}
+                  className="w-full sm:flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Testar Acesso Imediato</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => setNewCredentialsModal(null)}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-xs transition-colors cursor-pointer"
+              >
+                Concluir
               </button>
             </div>
           </div>

@@ -270,6 +270,21 @@ export default function App() {
     }
   };
 
+  const handleSwitchUser = (user: User) => {
+    setCurrentUser(user);
+    handleSwitchRole(user.role);
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: user.id,
+      title: 'Sessão Alternada',
+      message: `A sessão foi alternada para ${user.name} (${user.roleTitle || user.role}).`,
+      type: 'info',
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotifications(prev => [notif, ...prev]);
+  };
+
   // Authentication Handlers
   const handleLoginSuccess = useCallback((user: User, rememberMe: boolean) => {
     setCurrentUser(user);
@@ -680,6 +695,455 @@ export default function App() {
     setNotifications(prev => [notif, ...prev]);
   };
 
+  // Admin-exclusive: Appoint Department Director (Ensures Teacher role and system credentials)
+  const handleAppointDirector = (
+    departmentId: string, 
+    directorName: string, 
+    directorEmail?: string, 
+    teacherId?: string,
+    customPassword?: string,
+    teacherCategory?: string
+  ): { user: User; teacher: Teacher; password: string } | null => {
+    if (currentUser.role !== 'admin') {
+      const notif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: currentUser.id,
+        title: 'Acesso Negado',
+        message: 'Apenas o Administrador do Sistema pode nomear Diretores de Departamento.',
+        type: 'alert',
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+      setNotifications(prev => [notif, ...prev]);
+      return null;
+    }
+
+    const dept = departments.find(d => d.id === departmentId);
+    if (!dept) return null;
+
+    const email = directorEmail || `${directorName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@instituicao.edu`;
+    const password = customPassword || 'diretor123';
+
+    // 1. Ensure the Director is a Professor (Docente) in the department
+    let targetTeacher: Teacher;
+    const existingTeacher = teacherId ? teachers.find(t => t.id === teacherId) : teachers.find(t => t.email.toLowerCase() === email.toLowerCase());
+
+    if (existingTeacher) {
+      targetTeacher = {
+        ...existingTeacher,
+        name: directorName,
+        email,
+        departmentId,
+        category: teacherCategory || existingTeacher.category || 'Professor Catedrático',
+      };
+      setTeachers(prev => {
+        const updated = prev.map(t => t.id === existingTeacher.id ? targetTeacher : t);
+        StorageService.saveTeachers(updated);
+        return updated;
+      });
+    } else {
+      const newTeacherId = `doc-dir-${Date.now()}`;
+      targetTeacher = {
+        id: newTeacherId,
+        code: `DOC-DIR-${Math.floor(100 + Math.random() * 900)}`,
+        name: directorName,
+        gender: 'Masculino',
+        birthDate: '1975-01-01',
+        email,
+        phone: '+351 910 000 000',
+        departmentId,
+        category: teacherCategory || 'Professor Catedrático',
+        specialization: `Direção e Gestão Académica - ${dept.name}`,
+        contractType: 'Tempo Integral',
+        workloadLimit: 14,
+        currentWorkload: 0,
+        status: 'Ativo',
+        entryDate: new Date().toISOString().slice(0, 10),
+        notes: `Diretor do ${dept.name} nomeado pelo Administrador ${currentUser.name}.`,
+      };
+      setTeachers(prev => {
+        const updated = [targetTeacher, ...prev];
+        StorageService.saveTeachers(updated);
+        return updated;
+      });
+    }
+
+    // 2. Update department with Director info
+    setDepartments(prev => prev.map(d => {
+      if (d.id === departmentId) {
+        return {
+          ...d,
+          manager: directorName,
+          director: directorName,
+          directorEmail: email,
+          directorId: targetTeacher.id,
+          appointedBy: `${currentUser.name} (Admin)`,
+          appointedAt: new Date().toISOString(),
+        };
+      }
+      return d;
+    }));
+
+    // 3. Ensure User account with role 'diretor' exists with login credentials
+    let provisionedUser: User;
+    setUsers(prev => {
+      const existingUser = prev.find(u => 
+        u.email.toLowerCase() === email.toLowerCase() || 
+        u.teacherId === targetTeacher.id ||
+        (teacherId && u.teacherId === teacherId)
+      );
+
+      if (existingUser) {
+        provisionedUser = {
+          ...existingUser,
+          name: directorName,
+          email,
+          role: 'diretor' as UserRole,
+          roleTitle: `Diretor do ${dept.name}`,
+          departmentId,
+          teacherId: targetTeacher.id,
+          password: password,
+          status: 'Ativo',
+          appointedBy: currentUser.name,
+          appointedAt: new Date().toISOString(),
+        };
+        const updated = prev.map(u => u.id === existingUser.id ? provisionedUser : u);
+        StorageService.saveUsers(updated);
+        return updated;
+      } else {
+        provisionedUser = {
+          id: `usr-dir-${Date.now()}`,
+          name: directorName,
+          email,
+          role: 'diretor',
+          roleTitle: `Diretor do ${dept.name}`,
+          status: 'Ativo',
+          password: password,
+          departmentId,
+          teacherId: targetTeacher.id,
+          appointedBy: currentUser.name,
+          appointedAt: new Date().toISOString(),
+        };
+        const updated = [...prev, provisionedUser];
+        StorageService.saveUsers(updated);
+        return updated;
+      }
+    });
+
+    logAudit('UPDATE', 'Departamento', departmentId, `Admin ${currentUser.name} nomeou o docente ${directorName} como Diretor do ${dept.name} com credenciais de acesso atribuídas.`);
+    
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: currentUser.id,
+      title: 'Diretor Nomeado com Sucesso',
+      message: `${directorName} é agora Diretor do ${dept.name}. As credenciais de acesso (${email}) foram geradas.`,
+      type: 'success',
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    return { user: provisionedUser!, teacher: targetTeacher, password };
+  };
+
+  // Admin-exclusive: Revoke Department Director
+  const handleRevokeDirector = (departmentId: string) => {
+    if (currentUser.role !== 'admin') return;
+    const dept = departments.find(d => d.id === departmentId);
+    if (!dept) return;
+
+    setDepartments(prev => prev.map(d => d.id === departmentId ? {
+      ...d,
+      director: '',
+      manager: '',
+      directorEmail: '',
+      directorId: undefined,
+      appointedBy: undefined,
+      appointedAt: undefined,
+    } : d));
+
+    logAudit('UPDATE', 'Departamento', departmentId, `Admin ${currentUser.name} revogou a nomeação do Diretor do ${dept.name}.`);
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: currentUser.id,
+      title: 'Nomeação Revogada',
+      message: `O cargo de Diretor do ${dept.name} ficou vago.`,
+      type: 'info',
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotifications(prev => [notif, ...prev]);
+  };
+
+  // Admin-exclusive: Appoint Course Coordinator (Ensures Teacher role and system credentials)
+  const handleAppointCoordinator = (
+    courseId: string, 
+    coordinatorName: string, 
+    coordinatorEmail?: string, 
+    teacherId?: string,
+    customPassword?: string,
+    teacherCategory?: string
+  ): { user: User; teacher: Teacher; password: string } | null => {
+    if (currentUser.role !== 'admin') {
+      const notif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: currentUser.id,
+        title: 'Acesso Negado',
+        message: 'Apenas o Administrador do Sistema pode nomear Coordenadores de Curso.',
+        type: 'alert',
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+      setNotifications(prev => [notif, ...prev]);
+      return null;
+    }
+
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return null;
+
+    const email = coordinatorEmail || `${coordinatorName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@instituicao.edu`;
+    const password = customPassword || 'coord123';
+
+    // 1. Ensure the Coordinator is a Professor (Docente) in the course department
+    let targetTeacher: Teacher;
+    const existingTeacher = teacherId ? teachers.find(t => t.id === teacherId) : teachers.find(t => t.email.toLowerCase() === email.toLowerCase());
+
+    if (existingTeacher) {
+      targetTeacher = {
+        ...existingTeacher,
+        name: coordinatorName,
+        email,
+        departmentId: course.departmentId,
+        category: teacherCategory || existingTeacher.category || 'Professor Associado',
+      };
+      setTeachers(prev => {
+        const updated = prev.map(t => t.id === existingTeacher.id ? targetTeacher : t);
+        StorageService.saveTeachers(updated);
+        return updated;
+      });
+    } else {
+      const newTeacherId = `doc-coord-${Date.now()}`;
+      targetTeacher = {
+        id: newTeacherId,
+        code: `DOC-CRD-${Math.floor(100 + Math.random() * 900)}`,
+        name: coordinatorName,
+        gender: 'Masculino',
+        birthDate: '1978-01-01',
+        email,
+        phone: '+351 912 000 000',
+        departmentId: course.departmentId,
+        category: teacherCategory || 'Professor Associado',
+        specialization: `Coordenação e Pedagogia - ${course.name}`,
+        contractType: 'Tempo Integral',
+        workloadLimit: 16,
+        currentWorkload: 0,
+        status: 'Ativo',
+        entryDate: new Date().toISOString().slice(0, 10),
+        notes: `Coordenador de ${course.name} nomeado pelo Administrador ${currentUser.name}.`,
+      };
+      setTeachers(prev => {
+        const updated = [targetTeacher, ...prev];
+        StorageService.saveTeachers(updated);
+        return updated;
+      });
+    }
+
+    // 2. Update course
+    setCourses(prev => prev.map(c => {
+      if (c.id === courseId) {
+        return {
+          ...c,
+          coordinator: coordinatorName,
+          coordinatorEmail: email,
+          coordinatorId: targetTeacher.id,
+          appointedBy: `${currentUser.name} (Admin)`,
+          appointedAt: new Date().toISOString(),
+        };
+      }
+      return c;
+    }));
+
+    // 3. Ensure User account with role 'coordenador' exists with credentials
+    let provisionedUser: User;
+    setUsers(prev => {
+      const existingUser = prev.find(u => 
+        u.email.toLowerCase() === email.toLowerCase() || 
+        u.teacherId === targetTeacher.id ||
+        (teacherId && u.teacherId === teacherId)
+      );
+
+      if (existingUser) {
+        provisionedUser = {
+          ...existingUser,
+          name: coordinatorName,
+          email,
+          role: 'coordenador' as UserRole,
+          roleTitle: `Coordenador de ${course.name}`,
+          courseId,
+          departmentId: course.departmentId,
+          teacherId: targetTeacher.id,
+          password: password,
+          status: 'Ativo',
+          appointedBy: currentUser.name,
+          appointedAt: new Date().toISOString(),
+        };
+        const updated = prev.map(u => u.id === existingUser.id ? provisionedUser : u);
+        StorageService.saveUsers(updated);
+        return updated;
+      } else {
+        provisionedUser = {
+          id: `usr-coord-${Date.now()}`,
+          name: coordinatorName,
+          email,
+          role: 'coordenador',
+          roleTitle: `Coordenador de ${course.name}`,
+          status: 'Ativo',
+          password: password,
+          courseId,
+          departmentId: course.departmentId,
+          teacherId: targetTeacher.id,
+          appointedBy: currentUser.name,
+          appointedAt: new Date().toISOString(),
+        };
+        const updated = [...prev, provisionedUser];
+        StorageService.saveUsers(updated);
+        return updated;
+      }
+    });
+
+    logAudit('UPDATE', 'Curso', courseId, `Admin ${currentUser.name} nomeou o docente ${coordinatorName} como Coordenador do curso ${course.name} com credenciais de acesso atribuídas.`);
+    
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: currentUser.id,
+      title: 'Coordenador Nomeado com Sucesso',
+      message: `${coordinatorName} é agora Coordenador(a) do curso ${course.name}. Credenciais de acesso (${email}) atribuídas.`,
+      type: 'success',
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotifications(prev => [notif, ...prev]);
+
+    return { user: provisionedUser!, teacher: targetTeacher, password };
+  };
+
+  // Admin-exclusive: Revoke Course Coordinator
+  const handleRevokeCoordinator = (courseId: string) => {
+    if (currentUser.role !== 'admin') return;
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return;
+
+    setCourses(prev => prev.map(c => c.id === courseId ? {
+      ...c,
+      coordinator: '',
+      coordinatorEmail: '',
+      coordinatorId: undefined,
+      appointedBy: undefined,
+      appointedAt: undefined,
+    } : c));
+
+    logAudit('UPDATE', 'Curso', courseId, `Admin ${currentUser.name} revogou a nomeação do Coordenador de ${course.name}.`);
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: currentUser.id,
+      title: 'Nomeação Revogada',
+      message: `O cargo de Coordenador de ${course.name} ficou vago.`,
+      type: 'info',
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    setNotifications(prev => [notif, ...prev]);
+  };
+
+  // Save Department with Admin Protection
+  const handleSaveDepartment = (d: Partial<Department>) => {
+    const isAdmin = currentUser.role === 'admin';
+    if (d.id) {
+      setDepartments(prev => prev.map(item => {
+        if (item.id === d.id) {
+          const updated = { ...item, ...d } as Department;
+          if (!isAdmin) {
+            // Keep director protected from non-admins
+            updated.director = item.director;
+            updated.manager = item.manager;
+            updated.directorEmail = item.directorEmail;
+            updated.directorId = item.directorId;
+            updated.appointedBy = item.appointedBy;
+            updated.appointedAt = item.appointedAt;
+          } else if (d.director && d.director !== item.director) {
+            updated.appointedBy = `${currentUser.name} (Admin)`;
+            updated.appointedAt = new Date().toISOString();
+          }
+          return updated;
+        }
+        return item;
+      }));
+      logAudit('UPDATE', 'Departamento', d.id, `Departamento ${d.name || d.id} atualizado`);
+    } else {
+      const newId = `dep-${Date.now()}`;
+      const newDept: Department = {
+        id: newId,
+        code: d.code || `DEP-${departments.length + 1}`,
+        name: d.name || 'Novo Departamento',
+        description: d.description || '',
+        manager: isAdmin ? (d.director || d.manager || '') : '',
+        director: isAdmin ? (d.director || d.manager || '') : '',
+        directorEmail: isAdmin ? d.directorEmail : undefined,
+        directorId: isAdmin ? d.directorId : undefined,
+        appointedBy: isAdmin && d.director ? `${currentUser.name} (Admin)` : undefined,
+        appointedAt: isAdmin && d.director ? new Date().toISOString() : undefined,
+        status: d.status || 'Ativo',
+      };
+      setDepartments(prev => [...prev, newDept]);
+      logAudit('CREATE', 'Departamento', newId, `Novo departamento ${newDept.name} cadastrado`);
+    }
+  };
+
+  // Save Course with Admin Protection
+  const handleSaveCourse = (c: Partial<Course>) => {
+    const isAdmin = currentUser.role === 'admin';
+    if (c.id) {
+      setCourses(prev => prev.map(item => {
+        if (item.id === c.id) {
+          const updated = { ...item, ...c } as Course;
+          if (!isAdmin) {
+            // Keep coordinator protected from non-admins
+            updated.coordinator = item.coordinator;
+            updated.coordinatorEmail = item.coordinatorEmail;
+            updated.coordinatorId = item.coordinatorId;
+            updated.appointedBy = item.appointedBy;
+            updated.appointedAt = item.appointedAt;
+          } else if (c.coordinator && c.coordinator !== item.coordinator) {
+            updated.appointedBy = `${currentUser.name} (Admin)`;
+            updated.appointedAt = new Date().toISOString();
+          }
+          return updated;
+        }
+        return item;
+      }));
+      logAudit('UPDATE', 'Curso', c.id, `Curso ${c.name || c.id} atualizado`);
+    } else {
+      const newId = `crs-${Date.now()}`;
+      const newCourse: Course = {
+        id: newId,
+        code: c.code || `CRS-${courses.length + 1}`,
+        name: c.name || 'Novo Curso',
+        departmentId: c.departmentId || departments[0]?.id || '',
+        degree: c.degree || 'Licenciatura',
+        duration: c.duration || '3 Anos',
+        semesterCount: c.semesterCount || 6,
+        coordinator: isAdmin ? c.coordinator : undefined,
+        coordinatorEmail: isAdmin ? c.coordinatorEmail : undefined,
+        coordinatorId: isAdmin ? c.coordinatorId : undefined,
+        appointedBy: isAdmin && c.coordinator ? `${currentUser.name} (Admin)` : undefined,
+        appointedAt: isAdmin && c.coordinator ? new Date().toISOString() : undefined,
+        status: c.status || 'Ativo',
+      };
+      setCourses(prev => [...prev, newCourse]);
+      logAudit('CREATE', 'Curso', newId, `Novo curso ${newCourse.name} cadastrado`);
+    }
+  };
+
   // Teacher Availability
   const handleSaveAvailabilities = (teacherId: string, updated: TeacherAvailability[]) => {
     const remaining = availabilities.filter(a => a.teacherId !== teacherId);
@@ -1057,17 +1521,19 @@ export default function App() {
               classes={classes}
               rooms={rooms}
               periods={periods}
+              teachers={teachers}
+              users={users}
               userRole={currentUser.role}
-              onSaveDepartment={d => {
-                if (d.id) setDepartments(prev => prev.map(item => item.id === d.id ? { ...item, ...d } as Department : item));
-                else setDepartments(prev => [...prev, { ...d, id: `dep-${Date.now()}` } as Department]);
+              onSaveDepartment={handleSaveDepartment}
+              onDeleteDepartment={id => {
+                setDepartments(prev => prev.filter(d => d.id !== id));
+                logAudit('DELETE', 'Departamento', id, `Departamento ${id} eliminado por ${currentUser.name}`);
               }}
-              onDeleteDepartment={id => setDepartments(prev => prev.filter(d => d.id !== id))}
-              onSaveCourse={c => {
-                if (c.id) setCourses(prev => prev.map(item => item.id === c.id ? { ...item, ...c } as Course : item));
-                else setCourses(prev => [...prev, { ...c, id: `crs-${Date.now()}` } as Course]);
+              onSaveCourse={handleSaveCourse}
+              onDeleteCourse={id => {
+                setCourses(prev => prev.filter(c => c.id !== id));
+                logAudit('DELETE', 'Curso', id, `Curso ${id} eliminado por ${currentUser.name}`);
               }}
-              onDeleteCourse={id => setCourses(prev => prev.filter(c => c.id !== id))}
               onSaveSubject={s => {
                 if (s.id) setSubjects(prev => prev.map(item => item.id === s.id ? { ...item, ...s } as Subject : item));
                 else setSubjects(prev => [...prev, { ...s, id: `sub-${Date.now()}` } as Subject]);
@@ -1192,6 +1658,11 @@ export default function App() {
               notifications={notifications}
               onRestoreState={handleRestoreState}
               onResetToDefaults={handleResetData}
+              onAppointDirector={handleAppointDirector}
+              onAppointCoordinator={handleAppointCoordinator}
+              onRevokeDirector={handleRevokeDirector}
+              onRevokeCoordinator={handleRevokeCoordinator}
+              onSwitchUser={handleSwitchUser}
               onLogAudit={(action, entity, entityId, details) => {
                 logAudit(action as any, entity, entityId, details);
               }}

@@ -127,6 +127,67 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Quick Demo Access Credentials */}
+            <div className="mt-5 p-3.5 rounded-xl bg-slate-900/80 border border-indigo-900/60 text-xs">
+              <div className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>Perfis Institucionais (Demo):</span>
+                <span className="text-[10px] text-slate-400 font-normal">Clique para preencher</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdentifier('admin@instituicao.edu');
+                    setPassword('admin123');
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700/80 text-left border border-slate-700/60 transition-colors cursor-pointer"
+                >
+                  <div className="font-bold text-white text-[11px]">Administrador</div>
+                  <div className="text-[10px] text-slate-400 font-mono">admin123</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdentifier('diretor.inf@instituicao.edu');
+                    setPassword('diretor123');
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  className="p-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900/60 text-left border border-purple-800/60 transition-colors cursor-pointer"
+                >
+                  <div className="font-bold text-purple-200 text-[11px]">Diretor Dept.</div>
+                  <div className="text-[10px] text-purple-400 font-mono">diretor123</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdentifier('coordenador.inf@instituicao.edu');
+                    setPassword('coord123');
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  className="p-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-left border border-emerald-800/60 transition-colors cursor-pointer"
+                >
+                  <div className="font-bold text-emerald-200 text-[11px]">Coord. Curso</div>
+                  <div className="text-[10px] text-emerald-400 font-mono">coord123</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdentifier('joao.manuel@instituicao.edu');
+                    setPassword('docente123');
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700/80 text-left border border-slate-700/60 transition-colors cursor-pointer"
+                >
+                  <div className="font-bold text-slate-200 text-[11px]">Docente</div>
+                  <div className="text-[10px] text-slate-400 font-mono">docente123</div>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="mt-8 pt-4 border-t border-slate-700/60 text-xs text-slate-400">

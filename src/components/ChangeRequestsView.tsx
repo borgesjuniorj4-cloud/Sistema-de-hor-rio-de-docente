@@ -42,7 +42,7 @@ export const ChangeRequestsView: React.FC<ChangeRequestsViewProps> = ({
   onDeleteRequest,
 }) => {
   const isDocente = userRole === 'docente';
-  const canApprove = ['admin', 'gestor', 'coordenador'].includes(userRole);
+  const canApprove = ['admin', 'gestor', 'diretor', 'coordenador'].includes(userRole);
   const isAdmin = userRole === 'admin';
 
   const safeChangeRequests = Array.isArray(changeRequests) ? changeRequests : [];

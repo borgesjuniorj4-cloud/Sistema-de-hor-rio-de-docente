@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { 
   Building2, GraduationCap, BookOpen, UserCheck, 
-  School, Clock, Plus, Search, Edit3, Trash2, X, Check, CheckCircle2 
+  School, Clock, Plus, Search, Edit3, Trash2, X, Check, CheckCircle2,
+  Shield, Lock, Award, UserPlus, AlertCircle
 } from 'lucide-react';
 import { 
   Department, Course, Subject, ClassGroup, 
-  Room, AcademicPeriod, UserRole 
+  Room, AcademicPeriod, UserRole, Teacher, User 
 } from '../types';
 
 interface AcademicDataViewProps {
@@ -16,6 +17,8 @@ interface AcademicDataViewProps {
   classes: ClassGroup[];
   rooms: Room[];
   periods: AcademicPeriod[];
+  teachers?: Teacher[];
+  users?: User[];
   userRole: UserRole;
   onSaveDepartment: (d: Partial<Department>) => void;
   onDeleteDepartment: (id: string) => void;
@@ -39,6 +42,8 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
   classes = [],
   rooms = [],
   periods = [],
+  teachers = [],
+  users = [],
   userRole,
   onSaveDepartment,
   onDeleteDepartment,
@@ -54,6 +59,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
   onSwitchTab,
 }) => {
   const canEdit = ['admin', 'gestor'].includes(userRole);
+  const isAdmin = userRole === 'admin';
   const [search, setSearch] = useState('');
   const [modalType, setModalType] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -82,9 +88,27 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
   const handleOpenNew = () => {
     setEditingItem(null);
     if (activeTab === 'departments') {
-      setDeptForm({ code: `DEP-${departments.length + 1}`, name: '', description: '', manager: '', status: 'Ativo' });
+      setDeptForm({ 
+        code: `DEP-${departments.length + 1}`, 
+        name: '', 
+        description: '', 
+        manager: '', 
+        director: '', 
+        directorEmail: '',
+        status: 'Ativo' 
+      });
     } else if (activeTab === 'courses') {
-      setCourseForm({ code: `CRS-${courses.length + 1}`, name: '', departmentId: departments[0]?.id || '', degree: 'Licenciatura', duration: '3 Anos', semesterCount: 6, status: 'Ativo' });
+      setCourseForm({ 
+        code: `CRS-${courses.length + 1}`, 
+        name: '', 
+        departmentId: departments[0]?.id || '', 
+        degree: 'Licenciatura', 
+        duration: '3 Anos', 
+        semesterCount: 6, 
+        coordinator: '', 
+        coordinatorEmail: '',
+        status: 'Ativo' 
+      });
     } else if (activeTab === 'subjects') {
       setSubjectForm({ code: `DISC${subjects.length + 1}`, name: '', description: '', courseId: courses[0]?.id || '', departmentId: departments[0]?.id || '', credits: 6, weeklyHours: 4, semester: 1, type: 'Obrigatória', status: 'Ativo' });
     } else if (activeTab === 'classes') {
@@ -180,8 +204,15 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
               <tr>
                 <th className="py-3 px-4">Código</th>
                 <th className="py-3 px-4">Nome do Departamento</th>
+                <th className="py-3 px-4">
+                  <div className="flex items-center gap-1.5">
+                    <span>Diretor do Departamento</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                      Exclusivo Admin
+                    </span>
+                  </div>
+                </th>
                 <th className="py-3 px-4">Descrição</th>
-                <th className="py-3 px-4">Responsável</th>
                 <th className="py-3 px-4">Estado</th>
                 {canEdit && <th className="py-3 px-4 text-right">Ações</th>}
               </tr>
@@ -189,34 +220,62 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
             <tbody className="divide-y divide-slate-100">
               {departments
                 .filter(d => d.name.toLowerCase().includes(search.toLowerCase()) || d.code.toLowerCase().includes(search.toLowerCase()))
-                .map(dept => (
-                  <tr key={dept.id} className="hover:bg-slate-50">
-                    <td className="py-3 px-4 font-mono font-bold text-slate-800">{dept.code}</td>
-                    <td className="py-3 px-4 font-semibold text-slate-900">{dept.name}</td>
-                    <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{dept.description}</td>
-                    <td className="py-3 px-4 text-slate-700">{dept.manager}</td>
-                    <td className="py-3 px-4">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {dept.status}
-                      </span>
-                    </td>
-                    {canEdit && (
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => { setEditingItem(dept); setDeptForm(dept); setModalType('departments'); }}
-                            className="p-1 hover:bg-slate-100 text-slate-500 rounded"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => onDeleteDepartment(dept.id)} className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                .map(dept => {
+                  const currentDirector = dept.director || dept.manager;
+                  return (
+                    <tr key={dept.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-800">{dept.code}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-900">{dept.name}</td>
+                      <td className="py-3 px-4">
+                        {currentDirector ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0 border border-purple-200">
+                              <Shield className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900">{currentDirector}</div>
+                              <div className="text-[10px] text-purple-700 font-medium flex items-center gap-1">
+                                <Award className="w-2.5 h-2.5" />
+                                <span>{dept.appointedBy ? `Nomeado por ${dept.appointedBy}` : 'Nomeado pelo Administrador'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>Pendente nomeação pelo Admin</span>
+                          </span>
+                        )}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{dept.description}</td>
+                      <td className="py-3 px-4">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {dept.status}
+                        </span>
+                      </td>
+                      {canEdit && (
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => { setEditingItem(dept); setDeptForm(dept); setModalType('departments'); }}
+                              className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer"
+                              title="Editar Departamento"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => onDeleteDepartment(dept.id)} 
+                              className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                              title="Eliminar Departamento"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         )}
@@ -230,6 +289,14 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                 <th className="py-3 px-4">Nome do Curso</th>
                 <th className="py-3 px-4">Grau Académico</th>
                 <th className="py-3 px-4">Departamento</th>
+                <th className="py-3 px-4">
+                  <div className="flex items-center gap-1.5">
+                    <span>Coordenador do Curso</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                      Exclusivo Admin
+                    </span>
+                  </div>
+                </th>
                 <th className="py-3 px-4">Duração</th>
                 <th className="py-3 px-4">Estado</th>
                 {canEdit && <th className="py-3 px-4 text-right">Ações</th>}
@@ -246,6 +313,26 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                       <td className="py-3 px-4 font-semibold text-slate-900">{course.name}</td>
                       <td className="py-3 px-4 text-slate-700">{course.degree}</td>
                       <td className="py-3 px-4 text-slate-600">{dept?.name}</td>
+                      <td className="py-3 px-4">
+                        {course.coordinator ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-200">
+                              <Award className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900">{course.coordinator}</div>
+                              <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
+                                <span>{course.appointedBy ? `Nomeado por ${course.appointedBy}` : 'Nomeado pelo Administrador'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>Pendente nomeação pelo Admin</span>
+                          </span>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-slate-600">{course.duration} ({course.semesterCount} semestres)</td>
                       <td className="py-3 px-4">
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -257,11 +344,16 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => { setEditingItem(course); setCourseForm(course); setModalType('courses'); }}
-                              className="p-1 hover:bg-slate-100 text-slate-500 rounded"
+                              className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer"
+                              title="Editar Curso"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
-                            <button onClick={() => onDeleteCourse(course.id)} className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded">
+                            <button 
+                              onClick={() => onDeleteCourse(course.id)} 
+                              className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                              title="Eliminar Curso"
+                            >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -594,10 +686,89 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                     <label className="block font-semibold mb-1">Nome do Departamento</label>
                     <input type="text" required value={deptForm.name || ''} onChange={e => setDeptForm({ ...deptForm, name: e.target.value })} className="w-full border rounded p-2" />
                   </div>
-                  <div>
-                    <label className="block font-semibold mb-1">Responsável</label>
-                    <input type="text" required value={deptForm.manager || ''} onChange={e => setDeptForm({ ...deptForm, manager: e.target.value })} className="w-full border rounded p-2" />
+
+                  {/* Diretor do Departamento - EXCLUSIVO ADMIN */}
+                  <div className={`p-3 rounded-xl border ${isAdmin ? 'bg-purple-50/50 border-purple-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="font-semibold text-slate-800 flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Diretor do Departamento</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                          Exclusivo Admin
+                        </span>
+                      </label>
+                      {isAdmin && (
+                        <span className="text-[10px] text-purple-700 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Permissão Admin Ativa</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {isAdmin ? (
+                      <div className="space-y-2 mt-2">
+                        <div>
+                          <label className="text-[11px] text-slate-600 block mb-0.5">Nome do Diretor:</label>
+                          <input
+                            type="text"
+                            placeholder="ex.: Prof. Dr. Manuel Cardoso"
+                            value={deptForm.director || deptForm.manager || ''}
+                            onChange={e => setDeptForm({ ...deptForm, director: e.target.value, manager: e.target.value })}
+                            className="w-full border rounded p-2 bg-white text-slate-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-slate-600 block mb-0.5">E-mail Institucional do Diretor:</label>
+                          <input
+                            type="email"
+                            placeholder="ex.: diretor.inf@instituicao.edu"
+                            value={deptForm.directorEmail || ''}
+                            onChange={e => setDeptForm({ ...deptForm, directorEmail: e.target.value })}
+                            className="w-full border rounded p-2 bg-white text-slate-900"
+                          />
+                        </div>
+                        {teachers && teachers.length > 0 && (
+                          <div className="pt-1">
+                            <span className="text-[11px] text-slate-500">Ou nomear docente cadastrado:</span>
+                            <select
+                              className="w-full mt-1 border rounded p-1.5 text-xs bg-white text-slate-800"
+                              onChange={e => {
+                                const selected = teachers.find(t => t.id === e.target.value);
+                                if (selected) {
+                                  setDeptForm({
+                                    ...deptForm,
+                                    director: selected.name,
+                                    manager: selected.name,
+                                    directorEmail: selected.email,
+                                    directorId: selected.userId || selected.id,
+                                  });
+                                }
+                              }}
+                            >
+                              <option value="">-- Selecionar Docente da Instituição --</option>
+                              {teachers.map(t => (
+                                <option key={t.id} value={t.id}>{t.name} ({t.category} - {t.departmentId})</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                        <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold">Acesso Restrito ao Administrador</div>
+                          <div className="text-[11px] text-amber-800 mt-0.5">
+                            Apenas o perfil <strong>Administrador</strong> tem permissão estatutária para nomear ou destituir o Diretor do Departamento.
+                          </div>
+                          <div className="mt-1.5 font-medium text-[11px] text-slate-700 bg-white/80 p-1.5 rounded border border-amber-100">
+                            Diretor em funções: <strong>{deptForm.director || deptForm.manager || 'Nenhum diretor nomeado'}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
                   <div>
                     <label className="block font-semibold mb-1">Descrição</label>
                     <textarea value={deptForm.description || ''} onChange={e => setDeptForm({ ...deptForm, description: e.target.value })} className="w-full border rounded p-2" rows={3} />
@@ -621,6 +792,88 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                       {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </div>
+
+                  {/* Coordenador do Curso - EXCLUSIVO ADMIN */}
+                  <div className={`p-3 rounded-xl border ${isAdmin ? 'bg-purple-50/50 border-purple-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="font-semibold text-slate-800 flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Coordenador do Curso</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                          Exclusivo Admin
+                        </span>
+                      </label>
+                      {isAdmin && (
+                        <span className="text-[10px] text-purple-700 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Permissão Admin Ativa</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {isAdmin ? (
+                      <div className="space-y-2 mt-2">
+                        <div>
+                          <label className="text-[11px] text-slate-600 block mb-0.5">Nome do Coordenador:</label>
+                          <input
+                            type="text"
+                            placeholder="ex.: Prof. Dr. Fernando Ramos"
+                            value={courseForm.coordinator || ''}
+                            onChange={e => setCourseForm({ ...courseForm, coordinator: e.target.value })}
+                            className="w-full border rounded p-2 bg-white text-slate-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-slate-600 block mb-0.5">E-mail Institucional do Coordenador:</label>
+                          <input
+                            type="email"
+                            placeholder="ex.: coordenador.inf@instituicao.edu"
+                            value={courseForm.coordinatorEmail || ''}
+                            onChange={e => setCourseForm({ ...courseForm, coordinatorEmail: e.target.value })}
+                            className="w-full border rounded p-2 bg-white text-slate-900"
+                          />
+                        </div>
+                        {teachers && teachers.length > 0 && (
+                          <div className="pt-1">
+                            <span className="text-[11px] text-slate-500">Ou nomear docente cadastrado:</span>
+                            <select
+                              className="w-full mt-1 border rounded p-1.5 text-xs bg-white text-slate-800"
+                              onChange={e => {
+                                const selected = teachers.find(t => t.id === e.target.value);
+                                if (selected) {
+                                  setCourseForm({
+                                    ...courseForm,
+                                    coordinator: selected.name,
+                                    coordinatorEmail: selected.email,
+                                    coordinatorId: selected.userId || selected.id,
+                                  });
+                                }
+                              }}
+                            >
+                              <option value="">-- Selecionar Docente da Instituição --</option>
+                              {teachers.map(t => (
+                                <option key={t.id} value={t.id}>{t.name} ({t.category} - {t.departmentId})</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                        <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold">Acesso Restrito ao Administrador</div>
+                          <div className="text-[11px] text-amber-800 mt-0.5">
+                            Apenas o perfil <strong>Administrador</strong> tem permissão estatutária para nomear ou destituir o Coordenador do Curso.
+                          </div>
+                          <div className="mt-1.5 font-medium text-[11px] text-slate-700 bg-white/80 p-1.5 rounded border border-amber-100">
+                            Coordenador em funções: <strong>{courseForm.coordinator || 'Nenhum coordenador nomeado'}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block font-semibold mb-1">Grau</label>

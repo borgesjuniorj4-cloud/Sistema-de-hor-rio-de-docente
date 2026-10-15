@@ -35,8 +35,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   onDeleteTeacher,
   onResetTeacherPassword,
 }) => {
-  const canEdit = ['admin', 'gestor'].includes(userRole);
+  const canEdit = ['admin', 'gestor', 'coordenador'].includes(userRole);
   const isAdmin = userRole === 'admin';
+  const isCoordenador = userRole === 'coordenador';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('all');
@@ -222,10 +223,16 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-2xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
                 Módulo 5 (PDF Páginas 6-8)
               </span>
+              {isCoordenador && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Permissão de Coordenação: Adicionar Docentes</span>
+                </span>
+              )}
               <span className="text-xs text-slate-500 font-medium">
                 {filteredTeachers.length} de {teachers.length} docentes listados
               </span>
