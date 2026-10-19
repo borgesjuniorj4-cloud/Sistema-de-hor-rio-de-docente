@@ -8,7 +8,7 @@ import {
 import { 
   ScheduleItem, Teacher, Subject, ClassGroup, 
   Room, AcademicPeriod, DayOfWeek, UserRole, 
-  ScheduleConflict, ScheduleStatus 
+  ScheduleConflict, ScheduleStatus, Department, Course, User 
 } from '../types';
 import { DAYS_OF_WEEK, TIME_SLOTS } from '../data/initialData';
 import { ScheduleModal } from './ScheduleModal';
@@ -26,6 +26,11 @@ interface SchedulesViewProps {
   currentUserId: string;
   currentTeacherId?: string;
   currentClassId?: string;
+  departments?: Department[];
+  courses?: Course[];
+  currentUser?: User;
+  userDepartmentId?: string;
+  isGlobalManager?: boolean;
   onSaveSchedule: (schedule: Partial<ScheduleItem>) => void;
   onDeleteSchedule: (id: string) => void;
   onBulkDeleteSchedules?: (ids: string[], reason?: string) => void;
@@ -49,6 +54,11 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
   currentUserId,
   currentTeacherId,
   currentClassId,
+  departments = [],
+  courses = [],
+  currentUser,
+  userDepartmentId,
+  isGlobalManager,
   onSaveSchedule,
   onDeleteSchedule,
   onBulkDeleteSchedules,
@@ -63,6 +73,44 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
   const isCoordenador = userRole === 'coordenador';
   const isAdmin = userRole === 'admin';
 
+  const isGlobal = isGlobalManager ?? (userRole === 'admin' || userRole === 'gestor');
+  const activeDeptId = (!isGlobal && userDepartmentId) ? userDepartmentId : undefined;
+  const activeDepartment = activeDeptId ? departments.find(d => d.id === activeDeptId) : undefined;
+
+  // Scoped entities for the department
+  const scopedCourses = useMemo(() => {
+    return activeDeptId ? courses.filter(c => c.departmentId === activeDeptId) : courses;
+  }, [courses, activeDeptId]);
+
+  const scopedCourseIds = useMemo(() => new Set(scopedCourses.map(c => c.id)), [scopedCourses]);
+
+  const scopedTeachers = useMemo(() => {
+    return activeDeptId ? teachers.filter(t => t.departmentId === activeDeptId) : teachers;
+  }, [teachers, activeDeptId]);
+
+  const scopedTeacherIds = useMemo(() => new Set(scopedTeachers.map(t => t.id)), [scopedTeachers]);
+
+  const scopedClasses = useMemo(() => {
+    return activeDeptId ? classes.filter(c => scopedCourseIds.has(c.courseId)) : classes;
+  }, [classes, scopedCourseIds, activeDeptId]);
+
+  const scopedClassIds = useMemo(() => new Set(scopedClasses.map(c => c.id)), [scopedClasses]);
+
+  const scopedSubjects = useMemo(() => {
+    return activeDeptId ? subjects.filter(s => s.departmentId === activeDeptId || scopedCourseIds.has(s.courseId)) : subjects;
+  }, [subjects, scopedCourseIds, activeDeptId]);
+
+  const scopedSubjectIds = useMemo(() => new Set(scopedSubjects.map(s => s.id)), [scopedSubjects]);
+
+  const scopedSchedules = useMemo(() => {
+    if (!activeDeptId) return schedules;
+    return schedules.filter(s => 
+      scopedTeacherIds.has(s.teacherId) || 
+      scopedClassIds.has(s.classId) || 
+      scopedSubjectIds.has(s.subjectId)
+    );
+  }, [schedules, activeDeptId, scopedTeacherIds, scopedClassIds, scopedSubjectIds]);
+
   // Coordenador de Curso (Diretor de Curso) cria horários
   const canEdit = ['admin', 'gestor', 'coordenador'].includes(userRole);
   
@@ -76,10 +124,10 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
   );
 
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>(
-    currentTeacherId || teachers[0]?.id || ''
+    currentTeacherId || scopedTeachers[0]?.id || teachers[0]?.id || ''
   );
   const [selectedClassId, setSelectedClassId] = useState<string>(
-    currentClassId || classes[0]?.id || ''
+    currentClassId || scopedClasses[0]?.id || classes[0]?.id || ''
   );
   const [selectedRoomId, setSelectedRoomId] = useState<string>(rooms[0]?.id || '');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');

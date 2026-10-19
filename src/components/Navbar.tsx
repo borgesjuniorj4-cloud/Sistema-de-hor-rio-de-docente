@@ -308,9 +308,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-tight">
                     {currentUser?.name || 'Utilizador'}
                   </div>
-                  <span className={`inline-block text-[10px] font-medium px-1.5 py-0.2 rounded border ${getRoleBadgeColor(currentUser?.role || 'docente')}`}>
-                    {(currentUser?.role || 'docente').toUpperCase()}
-                  </span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className={`inline-block text-[10px] font-medium px-1.5 py-0.2 rounded border ${getRoleBadgeColor(currentUser?.role || 'docente')}`}>
+                      {(currentUser?.role || 'docente').toUpperCase()}
+                    </span>
+                    {currentUser?.departmentId && (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold">
+                        {currentUser.departmentId.replace('dep-', '').toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
               </button>
@@ -333,6 +340,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${getRoleBadgeColor(currentUser?.role || 'docente')}`}>
                           {currentUser?.roleTitle || (currentUser?.role || '').toUpperCase()}
                         </span>
+                        {currentUser?.departmentId && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>Isolamento ({currentUser.departmentId.replace('dep-', '').toUpperCase()})</span>
+                          </span>
+                        )}
+                        {(currentUser?.role === 'admin' || currentUser?.role === 'gestor') && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 font-semibold flex items-center gap-1">
+                            <Shield className="w-2.5 h-2.5" />
+                            <span>Visualização Total</span>
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                           Ativo

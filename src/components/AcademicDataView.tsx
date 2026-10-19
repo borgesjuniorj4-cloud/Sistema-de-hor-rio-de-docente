@@ -20,6 +20,9 @@ interface AcademicDataViewProps {
   teachers?: Teacher[];
   users?: User[];
   userRole: UserRole;
+  currentUser?: User;
+  userDepartmentId?: string;
+  isGlobalManager?: boolean;
   onSaveDepartment: (d: Partial<Department>) => void;
   onDeleteDepartment: (id: string) => void;
   onSaveCourse: (c: Partial<Course>) => void;
@@ -45,6 +48,9 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
   teachers = [],
   users = [],
   userRole,
+  currentUser,
+  userDepartmentId,
+  isGlobalManager,
   onSaveDepartment,
   onDeleteDepartment,
   onSaveCourse,
@@ -58,7 +64,39 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
   onSavePeriod,
   onSwitchTab,
 }) => {
-  const canEdit = ['admin', 'gestor'].includes(userRole);
+  const isGlobal = isGlobalManager ?? (userRole === 'admin' || userRole === 'gestor');
+  const activeDeptId = (!isGlobal && userDepartmentId) ? userDepartmentId : undefined;
+  const activeDepartment = activeDeptId ? departments.find(d => d.id === activeDeptId) : undefined;
+
+  // Department-scoped courses
+  const displayedCourses = React.useMemo(() => {
+    return activeDeptId ? courses.filter(c => c.departmentId === activeDeptId) : courses;
+  }, [courses, activeDeptId]);
+
+  const displayedCourseIds = React.useMemo(() => {
+    return new Set(displayedCourses.map(c => c.id));
+  }, [displayedCourses]);
+
+  // Department-scoped departments
+  const displayedDepartments = React.useMemo(() => {
+    return activeDeptId ? departments.filter(d => d.id === activeDeptId) : departments;
+  }, [departments, activeDeptId]);
+
+  // Department-scoped subjects
+  const displayedSubjects = React.useMemo(() => {
+    return activeDeptId 
+      ? subjects.filter(s => s.departmentId === activeDeptId || displayedCourseIds.has(s.courseId))
+      : subjects;
+  }, [subjects, activeDeptId, displayedCourseIds]);
+
+  // Department-scoped classes
+  const displayedClasses = React.useMemo(() => {
+    return activeDeptId
+      ? classes.filter(c => displayedCourseIds.has(c.courseId))
+      : classes;
+  }, [classes, activeDeptId, displayedCourseIds]);
+
+  const canEdit = ['admin', 'gestor', 'coordenador'].includes(userRole);
   const isAdmin = userRole === 'admin';
   const [search, setSearch] = useState('');
   const [modalType, setModalType] = useState<string | null>(null);
@@ -101,7 +139,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
       setCourseForm({ 
         code: `CRS-${courses.length + 1}`, 
         name: '', 
-        departmentId: departments[0]?.id || '', 
+        departmentId: activeDeptId || departments[0]?.id || '', 
         degree: 'Licenciatura', 
         duration: '3 Anos', 
         semesterCount: 6, 
@@ -110,9 +148,29 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
         status: 'Ativo' 
       });
     } else if (activeTab === 'subjects') {
-      setSubjectForm({ code: `DISC${subjects.length + 1}`, name: '', description: '', courseId: courses[0]?.id || '', departmentId: departments[0]?.id || '', credits: 6, weeklyHours: 4, semester: 1, type: 'Obrigatória', status: 'Ativo' });
+      setSubjectForm({ 
+        code: `DISC${subjects.length + 1}`, 
+        name: '', 
+        description: '', 
+        courseId: displayedCourses[0]?.id || courses[0]?.id || '', 
+        departmentId: activeDeptId || departments[0]?.id || '', 
+        credits: 6, 
+        weeklyHours: 4, 
+        semester: 1, 
+        type: 'Obrigatória', 
+        status: 'Ativo' 
+      });
     } else if (activeTab === 'classes') {
-      setClassForm({ code: `TURMA-${classes.length + 1}`, name: '', courseId: courses[0]?.id || '', year: 1, semester: 1, shift: 'Manhã', studentCount: 30, status: 'Ativo' });
+      setClassForm({ 
+        code: `TURMA-${classes.length + 1}`, 
+        name: '', 
+        courseId: displayedCourses[0]?.id || courses[0]?.id || '', 
+        year: 1, 
+        semester: 1, 
+        shift: 'Manhã', 
+        studentCount: 30, 
+        status: 'Ativo' 
+      });
     } else if (activeTab === 'rooms') {
       setRoomForm({ code: `SALA-${rooms.length + 1}`, name: '', building: 'Edifício Central', floor: 'Piso 1', capacity: 35, type: 'Sala normal', equipment: ['Projetor', 'Ar condicionado'], status: 'Disponível' });
     } else if (activeTab === 'periods') {
@@ -199,171 +257,175 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
         
         {/* DEPARTMENTS */}
         {activeTab === 'departments' && (
-          <table className="w-full text-xs text-left border-collapse">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[11px]">
-              <tr>
-                <th className="py-3 px-4">Código</th>
-                <th className="py-3 px-4">Nome do Departamento</th>
-                <th className="py-3 px-4">
-                  <div className="flex items-center gap-1.5">
-                    <span>Diretor do Departamento</span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200">
-                      Exclusivo Admin
-                    </span>
-                  </div>
-                </th>
-                <th className="py-3 px-4">Descrição</th>
-                <th className="py-3 px-4">Estado</th>
-                {canEdit && <th className="py-3 px-4 text-right">Ações</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {departments
-                .filter(d => d.name.toLowerCase().includes(search.toLowerCase()) || d.code.toLowerCase().includes(search.toLowerCase()))
-                .map(dept => {
-                  const currentDirector = dept.director || dept.manager;
-                  return (
-                    <tr key={dept.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-800">{dept.code}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">{dept.name}</td>
-                      <td className="py-3 px-4">
-                        {currentDirector ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0 border border-purple-200">
-                              <Shield className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                              <div className="font-bold text-slate-900">{currentDirector}</div>
-                              <div className="text-[10px] text-purple-700 font-medium flex items-center gap-1">
-                                <Award className="w-2.5 h-2.5" />
-                                <span>{dept.appointedBy ? `Nomeado por ${dept.appointedBy}` : 'Nomeado pelo Administrador'}</span>
+          <div>
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th className="py-3 px-4">Código</th>
+                  <th className="py-3 px-4">Nome do Departamento</th>
+                  <th className="py-3 px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span>Diretor do Departamento</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                        Exclusivo Admin
+                      </span>
+                    </div>
+                  </th>
+                  <th className="py-3 px-4">Descrição</th>
+                  <th className="py-3 px-4">Estado</th>
+                  {canEdit && <th className="py-3 px-4 text-right">Ações</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {displayedDepartments
+                  .filter(d => d.name.toLowerCase().includes(search.toLowerCase()) || d.code.toLowerCase().includes(search.toLowerCase()))
+                  .map(dept => {
+                    const currentDirector = dept.director || dept.manager;
+                    return (
+                      <tr key={dept.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-800">{dept.code}</td>
+                        <td className="py-3 px-4 font-semibold text-slate-900">{dept.name}</td>
+                        <td className="py-3 px-4">
+                          {currentDirector ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0 border border-purple-200">
+                                <Shield className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900">{currentDirector}</div>
+                                <div className="text-[10px] text-purple-700 font-medium flex items-center gap-1">
+                                  <Award className="w-2.5 h-2.5" />
+                                  <span>{dept.appointedBy ? `Nomeado por ${dept.appointedBy}` : 'Nomeado pelo Administrador'}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit">
-                            <Lock className="w-2.5 h-2.5" />
-                            <span>Pendente nomeação pelo Admin</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{dept.description}</td>
-                      <td className="py-3 px-4">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {dept.status}
-                        </span>
-                      </td>
-                      {canEdit && (
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => { setEditingItem(dept); setDeptForm(dept); setModalType('departments'); }}
-                              className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer"
-                              title="Editar Departamento"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                              onClick={() => onDeleteDepartment(dept.id)} 
-                              className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
-                              title="Eliminar Departamento"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>Pendente nomeação pelo Admin</span>
+                            </span>
+                          )}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
+                        <td className="py-3 px-4 text-slate-600 max-w-xs truncate">{dept.description}</td>
+                        <td className="py-3 px-4">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {dept.status}
+                          </span>
+                        </td>
+                        {canEdit && (
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => { setEditingItem(dept); setDeptForm(dept); setModalType('departments'); }}
+                                className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer"
+                                title="Editar Departamento"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => onDeleteDepartment(dept.id)} 
+                                className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                                title="Eliminar Departamento"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {/* COURSES */}
         {activeTab === 'courses' && (
-          <table className="w-full text-xs text-left border-collapse">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[11px]">
-              <tr>
-                <th className="py-3 px-4">Código</th>
-                <th className="py-3 px-4">Nome do Curso</th>
-                <th className="py-3 px-4">Grau Académico</th>
-                <th className="py-3 px-4">Departamento</th>
-                <th className="py-3 px-4">
-                  <div className="flex items-center gap-1.5">
-                    <span>Coordenador do Curso</span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200">
-                      Exclusivo Admin
-                    </span>
-                  </div>
-                </th>
-                <th className="py-3 px-4">Duração</th>
-                <th className="py-3 px-4">Estado</th>
-                {canEdit && <th className="py-3 px-4 text-right">Ações</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {courses
-                .filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase()))
-                .map(course => {
-                  const dept = departments.find(d => d.id === course.departmentId);
-                  return (
-                    <tr key={course.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-800">{course.code}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">{course.name}</td>
-                      <td className="py-3 px-4 text-slate-700">{course.degree}</td>
-                      <td className="py-3 px-4 text-slate-600">{dept?.name}</td>
-                      <td className="py-3 px-4">
-                        {course.coordinator ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-200">
-                              <Award className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                              <div className="font-bold text-slate-900">{course.coordinator}</div>
-                              <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
-                                <span>{course.appointedBy ? `Nomeado por ${course.appointedBy}` : 'Nomeado pelo Administrador'}</span>
+          <div>
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th className="py-3 px-4">Código</th>
+                  <th className="py-3 px-4">Nome do Curso</th>
+                  <th className="py-3 px-4">Grau Académico</th>
+                  <th className="py-3 px-4">Departamento</th>
+                  <th className="py-3 px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span>Coordenador do Curso</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                        Exclusivo Admin
+                      </span>
+                    </div>
+                  </th>
+                  <th className="py-3 px-4">Duração</th>
+                  <th className="py-3 px-4">Estado</th>
+                  {canEdit && <th className="py-3 px-4 text-right">Ações</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {displayedCourses
+                  .filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase()))
+                  .map(course => {
+                    const dept = departments.find(d => d.id === course.departmentId);
+                    return (
+                      <tr key={course.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-800">{course.code}</td>
+                        <td className="py-3 px-4 font-semibold text-slate-900">{course.name}</td>
+                        <td className="py-3 px-4 text-slate-700">{course.degree}</td>
+                        <td className="py-3 px-4 text-slate-600">{dept?.name}</td>
+                        <td className="py-3 px-4">
+                          {course.coordinator ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-200">
+                                <Award className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900">{course.coordinator}</div>
+                                <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
+                                  <span>{course.appointedBy ? `Nomeado por ${course.appointedBy}` : 'Nomeado pelo Administrador'}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit">
-                            <Lock className="w-2.5 h-2.5" />
-                            <span>Pendente nomeação pelo Admin</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600">{course.duration} ({course.semesterCount} semestres)</td>
-                      <td className="py-3 px-4">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          {course.status}
-                        </span>
-                      </td>
-                      {canEdit && (
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => { setEditingItem(course); setCourseForm(course); setModalType('courses'); }}
-                              className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer"
-                              title="Editar Curso"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                              onClick={() => onDeleteCourse(course.id)} 
-                              className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
-                              title="Eliminar Curso"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 w-fit">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>Pendente nomeação pelo Admin</span>
+                            </span>
+                          )}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
+                        <td className="py-3 px-4 text-slate-600">{course.duration} ({course.semesterCount} semestres)</td>
+                        <td className="py-3 px-4">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {course.status}
+                          </span>
+                        </td>
+                        {canEdit && (
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => { setEditingItem(course); setCourseForm(course); setModalType('courses'); }}
+                                className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer"
+                                title="Editar Curso"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => onDeleteCourse(course.id)} 
+                                className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                                title="Eliminar Curso"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {/* SUBJECTS */}
@@ -382,7 +444,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {subjects
+              {displayedSubjects
                 .filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.code.toLowerCase().includes(search.toLowerCase()))
                 .map(subj => {
                   const course = courses.find(c => c.id === subj.courseId);
@@ -437,7 +499,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {classes
+              {displayedClasses
                 .filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase()))
                 .map(cls => {
                   const course = courses.find(c => c.id === cls.courseId);
@@ -788,9 +850,18 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                   </div>
                   <div>
                     <label className="block font-semibold mb-1">Departamento</label>
-                    <select value={courseForm.departmentId} onChange={e => setCourseForm({ ...courseForm, departmentId: e.target.value })} className="w-full border rounded p-2">
-                      {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
+                    {isGlobal ? (
+                      <select value={courseForm.departmentId} onChange={e => setCourseForm({ ...courseForm, departmentId: e.target.value })} className="w-full border rounded p-2">
+                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    ) : (
+                      <div className="w-full text-xs rounded border border-indigo-200 bg-indigo-50/70 p-2 font-semibold text-indigo-900 flex items-center justify-between">
+                        <span>{departments.find(d => d.id === (activeDeptId || courseForm.departmentId))?.name || 'Seu Departamento'}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold border border-indigo-200">
+                          Isolamento Ativo
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Coordenador do Curso - EXCLUSIVO ADMIN */}
@@ -906,7 +977,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                   <div>
                     <label className="block font-semibold mb-1">Curso</label>
                     <select value={subjectForm.courseId} onChange={e => setSubjectForm({ ...subjectForm, courseId: e.target.value })} className="w-full border rounded p-2">
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {displayedCourses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
@@ -941,7 +1012,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                   <div>
                     <label className="block font-semibold mb-1">Curso</label>
                     <select value={classForm.courseId} onChange={e => setClassForm({ ...classForm, courseId: e.target.value })} className="w-full border rounded p-2">
-                      {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {displayedCourses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div className="grid grid-cols-3 gap-2">

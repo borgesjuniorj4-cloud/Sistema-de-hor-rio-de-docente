@@ -247,6 +247,32 @@ export default function App() {
     setAuditLogs(prevLogs => [newLog, ...prevLogs]);
   };
 
+  // Global management permissions: Exclusively Admin and Gestor Geral have full institutional access across all departments
+  const isGlobalManager = currentUser.role === 'admin' || currentUser.role === 'gestor';
+
+  // Department identification for department isolation
+  const userDepartmentId = useMemo(() => {
+    if (isGlobalManager) return undefined;
+    if (currentUser.departmentId) return currentUser.departmentId;
+    if (currentUser.teacherId) {
+      const t = teachers.find(teacher => teacher.id === currentUser.teacherId);
+      if (t?.departmentId) return t.departmentId;
+    }
+    const dept = departments.find(d => 
+      d.directorTeacherId === currentUser.teacherId || 
+      d.directorId === currentUser.id ||
+      (d.directorEmail && currentUser.email && d.directorEmail.toLowerCase() === currentUser.email.toLowerCase())
+    );
+    if (dept) return dept.id;
+    const course = courses.find(c => 
+      c.coordinatorTeacherId === currentUser.teacherId || 
+      c.coordinatorId === currentUser.id ||
+      (c.coordinatorEmail && currentUser.email && c.coordinatorEmail.toLowerCase() === currentUser.email.toLowerCase())
+    );
+    if (course) return course.departmentId;
+    return undefined;
+  }, [currentUser, isGlobalManager, teachers, departments, courses]);
+
   // Switch role helper
   const handleSwitchRole = (role: UserRole) => {
     const userForRole = users.find(u => u.role === role) || INITIAL_USERS.find(u => u.role === role) || {
@@ -272,7 +298,15 @@ export default function App() {
 
   const handleSwitchUser = (user: User) => {
     setCurrentUser(user);
-    handleSwitchRole(user.role);
+    if (user.role === 'docente') {
+      if (['departments', 'courses', 'audit_logs'].includes(currentTab)) {
+        setCurrentTab('schedules');
+      }
+    } else if (user.role === 'estudante') {
+      if (!['dashboard', 'schedules'].includes(currentTab)) {
+        setCurrentTab('schedules');
+      }
+    }
     const notif: NotificationItem = {
       id: `notif-${Date.now()}`,
       userId: user.id,
@@ -288,7 +322,15 @@ export default function App() {
   // Authentication Handlers
   const handleLoginSuccess = useCallback((user: User, rememberMe: boolean) => {
     setCurrentUser(user);
-    handleSwitchRole(user.role);
+    if (user.role === 'docente') {
+      if (['departments', 'courses', 'audit_logs'].includes(currentTab)) {
+        setCurrentTab('schedules');
+      }
+    } else if (user.role === 'estudante') {
+      if (!['dashboard', 'schedules'].includes(currentTab)) {
+        setCurrentTab('schedules');
+      }
+    }
     setIsAuthenticated(true);
     setIsLocked(false);
     try {
@@ -304,7 +346,7 @@ export default function App() {
     }
     resetTimer();
     logAudit('LOGIN' as any, 'Autenticação', user.id, `Utilizador ${user.name} (${user.roleTitle}) iniciou sessão com validação de credenciais.`);
-  }, [resetTimer]);
+  }, [resetTimer, currentTab]);
 
   const handleLogout = useCallback(() => {
     setIsAuthenticated(false);
@@ -1406,6 +1448,10 @@ export default function App() {
               userRole={currentUser.role}
               currentTeacherId={currentUser.teacherId}
               currentClassId={currentUser.classId}
+              departments={departments}
+              courses={courses}
+              userDepartmentId={userDepartmentId}
+              isGlobalManager={isGlobalManager}
               schedules={schedules}
               teachers={teachers}
               subjects={subjects}
@@ -1451,6 +1497,11 @@ export default function App() {
               rooms={rooms}
               periods={periods}
               conflicts={conflicts}
+              departments={departments}
+              courses={courses}
+              currentUser={currentUser}
+              userDepartmentId={userDepartmentId}
+              isGlobalManager={isGlobalManager}
               userRole={currentUser.role}
               currentUserId={currentUser.id}
               currentTeacherId={currentUser.teacherId}
@@ -1505,6 +1556,9 @@ export default function App() {
               users={users}
               currentUserId={currentUser.id}
               currentTeacherId={currentUser.teacherId}
+              currentUser={currentUser}
+              userDepartmentId={userDepartmentId}
+              isGlobalManager={isGlobalManager}
               onSaveTeacher={handleSaveTeacher}
               onDeleteTeacher={handleDeleteTeacher}
               onResetTeacherPassword={handleResetTeacherPassword}
@@ -1524,6 +1578,9 @@ export default function App() {
               teachers={teachers}
               users={users}
               userRole={currentUser.role}
+              currentUser={currentUser}
+              userDepartmentId={userDepartmentId}
+              isGlobalManager={isGlobalManager}
               onSaveDepartment={handleSaveDepartment}
               onDeleteDepartment={id => {
                 setDepartments(prev => prev.filter(d => d.id !== id));

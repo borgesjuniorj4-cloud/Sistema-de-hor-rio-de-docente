@@ -18,6 +18,9 @@ interface TeachersViewProps {
   users?: User[];
   currentUserId?: string;
   currentTeacherId?: string;
+  currentUser?: User;
+  userDepartmentId?: string;
+  isGlobalManager?: boolean;
   onSaveTeacher: (teacher: Partial<Teacher>) => { teacher: Teacher; user?: User; generatedPassword?: string } | void;
   onDeleteTeacher: (id: string, options?: { deleteSchedules?: boolean; deleteUserAccount?: boolean }) => void;
   onResetTeacherPassword?: (teacherId: string) => string | null;
@@ -31,10 +34,17 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   users = [],
   currentUserId,
   currentTeacherId,
+  currentUser,
+  userDepartmentId,
+  isGlobalManager,
   onSaveTeacher,
   onDeleteTeacher,
   onResetTeacherPassword,
 }) => {
+  const isGlobal = isGlobalManager ?? (userRole === 'admin' || userRole === 'gestor');
+  const activeDeptId = (!isGlobal && userDepartmentId) ? userDepartmentId : undefined;
+  const activeDepartment = activeDeptId ? departments.find(d => d.id === activeDeptId) : undefined;
+
   const canEdit = ['admin', 'gestor', 'coordenador'].includes(userRole);
   const isAdmin = userRole === 'admin';
   const isCoordenador = userRole === 'coordenador';
@@ -95,8 +105,11 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   }, [schedules]);
 
   const filteredTeachers = useMemo(() => {
-    return teachers.filter(t => {
-      if (selectedDept !== 'all' && t.departmentId !== selectedDept) return false;
+    // Department Isolation: if not a global manager, only teachers belonging to activeDeptId are visible
+    const baseTeachers = activeDeptId ? teachers.filter(t => t.departmentId === activeDeptId) : teachers;
+
+    return baseTeachers.filter(t => {
+      if (isGlobal && selectedDept !== 'all' && t.departmentId !== selectedDept) return false;
       if (selectedStatus !== 'all' && t.status !== selectedStatus) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -109,7 +122,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       }
       return true;
     });
-  }, [teachers, selectedDept, selectedStatus, searchQuery]);
+  }, [teachers, selectedDept, selectedStatus, searchQuery, isGlobal, activeDeptId]);
 
   const handleOpenAdd = () => {
     setEditingTeacher(null);
@@ -120,7 +133,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       birthDate: '1985-01-01',
       email: '',
       phone: '',
-      departmentId: departments[0]?.id || '',
+      departmentId: activeDeptId || departments[0]?.id || '',
       category: 'Professor Auxiliar',
       specialization: '',
       contractType: 'Tempo Integral',
@@ -219,6 +232,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   return (
     <div className="space-y-6">
       
+
       {/* Header */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-2xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -227,6 +241,12 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
                 Módulo 5 (PDF Páginas 6-8)
               </span>
+              {!isGlobal && activeDepartment && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>{activeDepartment.name}</span>
+                </span>
+              )}
               {isCoordenador && (
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5" />
@@ -234,7 +254,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                 </span>
               )}
               <span className="text-xs text-slate-500 font-medium">
-                {filteredTeachers.length} de {teachers.length} docentes listados
+                {filteredTeachers.length} de {isGlobal ? teachers.length : filteredTeachers.length} docentes listados
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
@@ -282,16 +302,28 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
           </div>
 
           <div>
-            <select
-              value={selectedDept}
-              onChange={e => setSelectedDept(e.target.value)}
-              className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="all">Todos os Departamentos</option>
-              {departments.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
+            {isGlobal ? (
+              <select
+                value={selectedDept}
+                onChange={e => setSelectedDept(e.target.value)}
+                className="w-full text-xs rounded-lg border border-slate-300 px-3 py-1.5 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">Todos os Departamentos ({teachers.length}) - Visualização Total</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({teachers.filter(t => t.departmentId === d.id).length})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium h-[34px]">
+                <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span className="font-semibold truncate">{activeDepartment?.name || 'Seu Departamento'}</span>
+                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-200 shrink-0">
+                  Restrito
+                </span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -521,15 +553,24 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Departamento *</label>
-                  <select
-                    value={formData.departmentId}
-                    onChange={e => setFormData({ ...formData, departmentId: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-900"
-                  >
-                    {departments.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                  {isGlobal ? (
+                    <select
+                      value={formData.departmentId}
+                      onChange={e => setFormData({ ...formData, departmentId: e.target.value })}
+                      className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-900"
+                    >
+                      {departments.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full text-xs rounded-lg border border-indigo-200 bg-indigo-50/70 p-2 font-semibold text-indigo-900 flex items-center justify-between">
+                      <span>{deptMap.get(activeDeptId || '') || 'Seu Departamento'}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold border border-indigo-200">
+                        Isolamento Ativo
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Categoria Profissional</label>

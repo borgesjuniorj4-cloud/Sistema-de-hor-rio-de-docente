@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Users, BookOpen, UserCheck, School, Calendar, AlertTriangle, 
   Clock, GitPullRequest, ArrowRight, CheckCircle2, AlertCircle,
   TrendingUp, CalendarCheck, ShieldAlert, Sparkles, ExternalLink,
-  FileDown, Mail
+  FileDown, Mail, Lock, ShieldCheck, GraduationCap
 } from 'lucide-react';
 import { 
   User, UserRole, Teacher, Department, Course, Subject, ClassGroup, 
@@ -17,6 +17,10 @@ interface DashboardProps {
   userRole?: UserRole;
   currentTeacherId?: string;
   currentClassId?: string;
+  departments?: Department[];
+  courses?: Course[];
+  userDepartmentId?: string;
+  isGlobalManager?: boolean;
   teachers?: Teacher[];
   subjects?: Subject[];
   classes?: ClassGroup[];
@@ -39,6 +43,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   userRole,
   currentTeacherId,
   currentClassId,
+  departments = [],
+  courses = [],
+  userDepartmentId,
+  isGlobalManager,
   teachers = [],
   subjects = [],
   classes = [],
@@ -65,18 +73,59 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const safeChangeRequests = Array.isArray(changeRequests) ? changeRequests : [];
   const safePeriods = Array.isArray(periods) ? periods : [];
 
-  const activeTeachers = safeTeachers.filter(t => t.status === 'Ativo');
-  const activeSubjects = safeSubjects.filter(s => s.status === 'Ativo');
-  const activeClasses = safeClasses.filter(c => c.status === 'Ativo');
-  const activeRooms = safeRooms.filter(r => r.status === 'Disponível');
-  const scheduledLessons = safeSchedules.filter(s => s.status !== 'Cancelado');
-  const publishedSchedules = safeSchedules.filter(s => s.status === 'Publicado');
-  const pendingRequests = safeChangeRequests.filter(r => r.status === 'Pendente');
-  const currentPeriod = safePeriods.find(p => p.isCurrent) || safePeriods[0];
-
   // Role detection
   const role = currentUser?.role || userRole || 'gestor';
-  const isAcademicManager = ['gestor', 'admin', 'coordenador'].includes(role);
+  const isGlobal = isGlobalManager ?? (role === 'admin' || role === 'gestor');
+  const activeDeptId = (!isGlobal && userDepartmentId) ? userDepartmentId : undefined;
+  const activeDepartment = activeDeptId ? departments.find(d => d.id === activeDeptId) : undefined;
+
+  // Scoped data when in department isolation mode
+  const scopedCourses = useMemo(() => {
+    return activeDeptId ? courses.filter(c => c.departmentId === activeDeptId) : courses;
+  }, [courses, activeDeptId]);
+  const scopedCourseIds = useMemo(() => new Set(scopedCourses.map(c => c.id)), [scopedCourses]);
+
+  const scopedTeachers = useMemo(() => {
+    return activeDeptId ? safeTeachers.filter(t => t.departmentId === activeDeptId) : safeTeachers;
+  }, [safeTeachers, activeDeptId]);
+  const scopedTeacherIds = useMemo(() => new Set(scopedTeachers.map(t => t.id)), [scopedTeachers]);
+
+  const scopedSubjects = useMemo(() => {
+    return activeDeptId ? safeSubjects.filter(s => s.departmentId === activeDeptId || scopedCourseIds.has(s.courseId)) : safeSubjects;
+  }, [safeSubjects, scopedCourseIds, activeDeptId]);
+  const scopedSubjectIds = useMemo(() => new Set(scopedSubjects.map(s => s.id)), [scopedSubjects]);
+
+  const scopedClasses = useMemo(() => {
+    return activeDeptId ? safeClasses.filter(c => scopedCourseIds.has(c.courseId)) : safeClasses;
+  }, [safeClasses, scopedCourseIds, activeDeptId]);
+  const scopedClassIds = useMemo(() => new Set(scopedClasses.map(c => c.id)), [scopedClasses]);
+
+  const scopedSchedules = useMemo(() => {
+    if (!activeDeptId) return safeSchedules;
+    return safeSchedules.filter(s => 
+      scopedTeacherIds.has(s.teacherId) || 
+      scopedClassIds.has(s.classId) || 
+      scopedSubjectIds.has(s.subjectId)
+    );
+  }, [safeSchedules, activeDeptId, scopedTeacherIds, scopedClassIds, scopedSubjectIds]);
+
+  const scopedConflicts = useMemo(() => {
+    if (!activeDeptId) return safeConflicts;
+    const schIds = new Set(scopedSchedules.map(s => s.id));
+    return safeConflicts.filter(c => c.scheduleItemIds.some(id => schIds.has(id)));
+  }, [safeConflicts, activeDeptId, scopedSchedules]);
+
+  const activeTeachers = scopedTeachers.filter(t => t.status === 'Ativo');
+  const activeSubjects = scopedSubjects.filter(s => s.status === 'Ativo');
+  const activeClasses = scopedClasses.filter(c => c.status === 'Ativo');
+  const activeRooms = safeRooms.filter(r => r.status === 'Disponível');
+  const scheduledLessons = scopedSchedules.filter(s => s.status !== 'Cancelado');
+  const publishedSchedules = scopedSchedules.filter(s => s.status === 'Publicado');
+  const pendingRequests = safeChangeRequests.filter(r => r.status === 'Pendente');
+  const currentPeriod = safePeriods.find(p => p.isCurrent) || safePeriods[0];
+  const effectiveConflicts = scopedConflicts;
+
+  const isAcademicManager = ['gestor', 'admin', 'coordenador', 'diretor'].includes(role);
   const effectiveTeacherId = currentTeacherId || currentUser?.teacherId;
 
   // Specific Teacher Dashboard logic (PDF page 37)
@@ -102,8 +151,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   })).sort((a, b) => b.count - a.count).slice(0, 4);
 
   // Calculate teacher workloads
-  const teacherWorkloadList = safeTeachers.map(t => {
-    const tSchedules = safeSchedules.filter(s => s.teacherId === t.id && s.status !== 'Cancelado');
+  const teacherWorkloadList = scopedTeachers.map(t => {
+    const tSchedules = scopedSchedules.filter(s => s.teacherId === t.id && s.status !== 'Cancelado');
     let totalMinutes = 0;
     for (const sch of tSchedules) {
       const [sh, sm] = sch.startTime.split(':').map(Number);
@@ -403,22 +452,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div 
           onClick={() => onNavigate('conflicts')}
           className={`p-4 rounded-xl border cursor-pointer transition-all ${
-            conflicts.length > 0 
+            effectiveConflicts.length > 0 
               ? 'bg-rose-50/70 border-rose-200 hover:bg-rose-50' 
               : 'bg-white border-slate-200 hover:border-emerald-200'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold ${conflicts.length > 0 ? 'text-rose-700' : 'text-slate-500'}`}>
+            <span className={`text-xs font-semibold ${effectiveConflicts.length > 0 ? 'text-rose-700' : 'text-slate-500'}`}>
               Conflitos
             </span>
-            <AlertTriangle className={`w-4 h-4 ${conflicts.length > 0 ? 'text-rose-600 animate-pulse' : 'text-emerald-500'}`} />
+            <AlertTriangle className={`w-4 h-4 ${effectiveConflicts.length > 0 ? 'text-rose-600 animate-pulse' : 'text-emerald-500'}`} />
           </div>
-          <div className={`mt-2 text-2xl font-bold ${conflicts.length > 0 ? 'text-rose-700' : 'text-slate-900'}`}>
-            {conflicts.length}
+          <div className={`mt-2 text-2xl font-bold ${effectiveConflicts.length > 0 ? 'text-rose-700' : 'text-slate-900'}`}>
+            {effectiveConflicts.length}
           </div>
-          <div className={`text-[11px] mt-0.5 ${conflicts.length > 0 ? 'text-rose-600 font-medium' : 'text-slate-500'}`}>
-            {conflicts.length > 0 ? 'Ação requerida' : 'Nenhum conflito'}
+          <div className={`text-[11px] mt-0.5 ${effectiveConflicts.length > 0 ? 'text-rose-600 font-medium' : 'text-slate-500'}`}>
+            {effectiveConflicts.length > 0 ? 'Ação requerida' : 'Nenhum conflito'}
           </div>
         </div>
 
