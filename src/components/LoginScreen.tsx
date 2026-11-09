@@ -3,17 +3,19 @@ import {
   Lock, Mail, Eye, EyeOff, ShieldCheck, AlertCircle, 
   LogIn, ArrowRight, School
 } from 'lucide-react';
-import { User } from '../types';
+import { User, Teacher } from '../types';
 import { ThemeToggle } from './ThemeToggle';
 
 interface LoginScreenProps {
   users: User[];
+  teachers?: Teacher[];
   onLoginSuccess: (user: User, rememberMe: boolean) => void;
   defaultUser?: User;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   users,
+  teachers = [],
   onLoginSuccess,
 }) => {
   const [identifier, setIdentifier] = useState('');
@@ -23,35 +25,105 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper to normalize strings (remove accents and special marks)
+  const normalizeText = (text: string) => {
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    const cleanIdentifier = identifier.trim().toLowerCase();
+    const rawId = identifier.trim();
+    const cleanIdentifier = rawId.toLowerCase();
+    const normIdentifier = normalizeText(rawId);
     const cleanPassword = password.trim();
 
-    // Strict validation: identifier required
+    // 1. Validation: identifier required
     if (!cleanIdentifier) {
       setErrorMessage('Por favor, introduza o seu e-mail institucional ou nome de utilizador.');
       return;
     }
 
-    // Strict validation: password required
+    // 2. Validation: password required
     if (!cleanPassword) {
       setErrorMessage('Por favor, introduza a sua palavra-passe.');
       return;
     }
 
-    // Find matching user strictly by email, username or ID
-    const matchedUser = users.find(u => 
-      u.email.toLowerCase() === cleanIdentifier || 
-      u.name.toLowerCase() === cleanIdentifier ||
-      u.id.toLowerCase() === cleanIdentifier
-    );
+    // Build teacher code / ID map for rapid lookup
+    const teacherIdMap = new Map(teachers.map(t => [t.id.toLowerCase(), t]));
+    const teacherCodeMap = new Map(teachers.map(t => [t.code?.toLowerCase() || '', t]));
 
-    // Verify user existence and password accuracy
-    if (!matchedUser || matchedUser.password !== cleanPassword) {
-      setErrorMessage('Credenciais incorretas! Verifique o e-mail/utilizador e a palavra-passe.');
+    // Find matching user with robust identity matching:
+    // a) Exact email match
+    // b) Email prefix match (e.g. "admin" for "admin@instituicao.edu")
+    // c) User ID match (e.g. "usr-admin" or "admin")
+    // d) Exact or normalized user name match
+    // e) Teacher ID or Teacher Code match
+    const matchedUser = users.find(u => {
+      const uEmail = (u.email || '').toLowerCase().trim();
+      const uEmailPrefix = uEmail.split('@')[0];
+      const uId = (u.id || '').toLowerCase().trim();
+      const uIdShort = uId.replace(/^usr-/, '');
+      const uNameNorm = normalizeText(u.name || '');
+
+      // Direct email or prefix match
+      if (uEmail === cleanIdentifier || uEmailPrefix === cleanIdentifier) return true;
+
+      // Direct ID match
+      if (uId === cleanIdentifier || uIdShort === cleanIdentifier) return true;
+
+      // Name matches (case-insensitive and accent-insensitive)
+      if (uNameNorm === normIdentifier) return true;
+
+      // Teacher link matching
+      if (u.teacherId) {
+        const tId = u.teacherId.toLowerCase();
+        if (tId === cleanIdentifier) return true;
+        
+        const linkedTeacher = teacherIdMap.get(tId);
+        if (linkedTeacher) {
+          if (linkedTeacher.code && linkedTeacher.code.toLowerCase() === cleanIdentifier) return true;
+          if (normalizeText(linkedTeacher.name) === normIdentifier) return true;
+        }
+      }
+
+      // Check if identifier entered was a teacher code that points to this user
+      const teacherByCode = teacherCodeMap.get(cleanIdentifier);
+      if (teacherByCode && (teacherByCode.id === u.teacherId || teacherByCode.userId === u.id)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    // 3. User existence check
+    if (!matchedUser) {
+      setErrorMessage(
+        `Utilizador "${rawId}" não encontrado. Verifique se o e-mail ou nome foi introduzido corretamente.`
+      );
+      return;
+    }
+
+    // 4. Inactive or blocked account check
+    if (matchedUser.status && matchedUser.status !== 'Ativo') {
+      setErrorMessage(
+        `A conta de "${matchedUser.name}" encontra-se ${matchedUser.status.toLowerCase()}. Contacte o Administrador.`
+      );
+      return;
+    }
+
+    // 5. Password verification (support trimmed exact match)
+    const userPass = (matchedUser.password || '').trim();
+    if (userPass !== cleanPassword) {
+      setErrorMessage(
+        `Palavra-passe incorreta para "${matchedUser.name}". Verifique se as maiúsculas (Caps Lock) estão ativas.`
+      );
       return;
     }
 
@@ -60,7 +132,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setTimeout(() => {
       onLoginSuccess(matchedUser, rememberMe);
       setIsSubmitting(false);
-    }, 300);
+    }, 250);
   };
 
   return (

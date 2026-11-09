@@ -3,7 +3,8 @@ import {
   Users, Plus, Search, Filter, Download, Edit3, 
   Trash2, Mail, Phone, Building2, Clock, CheckCircle2, 
   AlertTriangle, X, Eye, EyeOff, FileText, ChevronRight,
-  Key, ShieldCheck, Copy, Check, RefreshCw, Lock, Sparkles
+  Key, ShieldCheck, Copy, Check, RefreshCw, Lock, Sparkles,
+  Printer
 } from 'lucide-react';
 import { 
   Teacher, Department, ScheduleItem, TeacherStatus, 
@@ -24,6 +25,7 @@ interface TeachersViewProps {
   onSaveTeacher: (teacher: Partial<Teacher>) => { teacher: Teacher; user?: User; generatedPassword?: string } | void;
   onDeleteTeacher: (id: string, options?: { deleteSchedules?: boolean; deleteUserAccount?: boolean }) => void;
   onResetTeacherPassword?: (teacherId: string) => string | null;
+  onOpenTeacherPdfModal?: (teacherId?: string) => void;
 }
 
 export const TeachersView: React.FC<TeachersViewProps> = ({
@@ -40,6 +42,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   onSaveTeacher,
   onDeleteTeacher,
   onResetTeacherPassword,
+  onOpenTeacherPdfModal,
 }) => {
   const isGlobal = isGlobalManager ?? (userRole === 'admin' || userRole === 'gestor');
   const activeDeptId = (!isGlobal && userDepartmentId) ? userDepartmentId : undefined;
@@ -267,6 +270,16 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
           <div className="flex items-center gap-2.5">
             <button
+              id="btn-print-teacher-pdf-header"
+              onClick={() => onOpenTeacherPdfModal?.(filteredTeachers[0]?.id || teachers[0]?.id)}
+              className="px-3.5 py-2 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              title="Gerar e imprimir grade horária oficial individual em PDF com auditoria RN06"
+            >
+              <Printer className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Imprimir Grade Docente (PDF)</span>
+            </button>
+
+            <button
               id="btn-export-teachers"
               onClick={exportToCSV}
               className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors"
@@ -435,30 +448,43 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                   </div>
                 )}
 
-                {canEdit && (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      id={`btn-edit-teacher-${teacher.id}`}
-                      onClick={() => handleOpenEdit(teacher)}
-                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      id={`btn-delete-teacher-${teacher.id}`}
-                      onClick={() => {
-                        setTeacherToDelete(teacher);
-                        setDeleteSchedulesOption(true);
-                        setDeleteAccountOption(true);
-                      }}
-                      className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/80 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
-                      title="Eliminar docente do sistema"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    id={`btn-pdf-teacher-${teacher.id}`}
+                    type="button"
+                    onClick={() => onOpenTeacherPdfModal?.(teacher.id)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Imprimir grade horária individual deste docente em PDF"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>Grade PDF</span>
+                  </button>
+
+                  {canEdit && (
+                    <>
+                      <button
+                        id={`btn-edit-teacher-${teacher.id}`}
+                        onClick={() => handleOpenEdit(teacher)}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        id={`btn-delete-teacher-${teacher.id}`}
+                        onClick={() => {
+                          setTeacherToDelete(teacher);
+                          setDeleteSchedulesOption(true);
+                          setDeleteAccountOption(true);
+                        }}
+                        className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/80 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
+                        title="Eliminar docente do sistema"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           );

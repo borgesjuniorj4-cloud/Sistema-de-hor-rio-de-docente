@@ -3,7 +3,7 @@ import {
   Calendar, Plus, Filter, Search, Sparkles, Printer, 
   AlertTriangle, CheckCircle2, ChevronRight, Edit3, Trash2, 
   Clock, School, User as UserIcon, Users, BookOpen, Layers, Check, 
-  RotateCcw, Download, X, Shield, ShieldCheck, Send, Award, FileCheck
+  RotateCcw, Download, X, Shield, ShieldCheck, Send, Award, FileCheck, FileText
 } from 'lucide-react';
 import { 
   ScheduleItem, Teacher, Subject, ClassGroup, 
@@ -38,6 +38,7 @@ interface SchedulesViewProps {
   onApplyGeneratedSchedules: (newItems: ScheduleItem[]) => void;
   availabilities: any[];
   onRequestChange?: (schedule: ScheduleItem) => void;
+  onOpenTeacherPdfModal?: (teacherId?: string) => void;
 }
 
 type ViewMode = 'all' | 'teacher' | 'class' | 'room' | 'subject';
@@ -66,6 +67,7 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
   onApplyGeneratedSchedules,
   availabilities = [],
   onRequestChange,
+  onOpenTeacherPdfModal,
 }) => {
   const isDocente = userRole === 'docente';
   const isEstudante = userRole === 'estudante';
@@ -311,6 +313,20 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
             >
               <Printer className="w-3.5 h-3.5 text-slate-500" />
               <span>Imprimir / PDF</span>
+            </button>
+
+            {/* Teacher Schedule PDF Generation Modal (RN06 & Official Academic Print) */}
+            <button
+              id="btn-print-teacher-schedule-pdf"
+              onClick={() => {
+                const targetTeacherId = viewMode === 'teacher' ? selectedTeacherId : (currentTeacherId || teachers[0]?.id);
+                onOpenTeacherPdfModal?.(targetTeacherId);
+              }}
+              className="px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              title="Gerar e imprimir grade horária individual de docente em PDF com auditoria RN06"
+            >
+              <FileText className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Grade Individual (PDF)</span>
             </button>
 
             {/* Coordinator Submit Schedule to Director */}

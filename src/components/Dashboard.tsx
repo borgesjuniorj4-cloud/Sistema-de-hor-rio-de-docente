@@ -3,7 +3,7 @@ import {
   Users, BookOpen, UserCheck, School, Calendar, AlertTriangle, 
   Clock, GitPullRequest, ArrowRight, CheckCircle2, AlertCircle,
   TrendingUp, CalendarCheck, ShieldAlert, Sparkles, ExternalLink,
-  FileDown, Mail, Lock, ShieldCheck, GraduationCap
+  FileDown, Mail, Lock, ShieldCheck, GraduationCap, Printer
 } from 'lucide-react';
 import { 
   User, UserRole, Teacher, Department, Course, Subject, ClassGroup, 
@@ -36,6 +36,7 @@ interface DashboardProps {
   onPublishSchedule?: () => void;
   onExportPdfSuccess?: () => void;
   onOpenEmails?: () => void;
+  onOpenTeacherPdfModal?: (teacherId?: string) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -62,6 +63,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onPublishSchedule,
   onExportPdfSuccess,
   onOpenEmails,
+  onOpenTeacherPdfModal,
 }) => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const safeTeachers = Array.isArray(teachers) ? teachers : [];
@@ -194,6 +196,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Teacher Timetable Official PDF Generation */}
+          <button
+            id="btn-dash-print-teacher-pdf"
+            onClick={() => onOpenTeacherPdfModal?.(isTeacherView ? (currentTeacherId || currentUser.teacherId) : undefined)}
+            className="px-3.5 py-2 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+            title="Gerar e imprimir grade horária individual de docente em PDF com conformidade RN06"
+          >
+            <Printer className="w-4 h-4 text-indigo-600" />
+            <span>{isTeacherView ? 'Imprimir Meu Horário (PDF)' : 'Imprimir Grade Docente (PDF)'}</span>
+          </button>
+
           {isAcademicManager && (
             <button
               id="btn-export-dashboard-pdf"

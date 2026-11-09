@@ -33,6 +33,7 @@ import { ScheduleModal } from './components/ScheduleModal';
 import { AutoGenerateModal } from './components/AutoGenerateModal';
 import { LockScreen } from './components/LockScreen';
 import { LoginScreen } from './components/LoginScreen';
+import { TeacherSchedulePdfModal } from './components/TeacherSchedulePdfModal';
 import { SimulatedEmailToast } from './components/SimulatedEmailToast';
 import { SimulatedEmailsModal } from './components/SimulatedEmailsModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
@@ -99,6 +100,17 @@ export default function App() {
   const [globalScheduleModalOpen, setGlobalScheduleModalOpen] = useState(false);
   const [globalEditingSchedule, setGlobalEditingSchedule] = useState<ScheduleItem | null>(null);
   const [globalAutoModalOpen, setGlobalAutoModalOpen] = useState(false);
+
+  // Teacher Schedule PDF Generation Modal (RN06 & Official Printing)
+  const [teacherPdfModalOpen, setTeacherPdfModalOpen] = useState(false);
+  const [teacherPdfModalTeacherId, setTeacherPdfModalTeacherId] = useState<string | undefined>(undefined);
+  const [teacherPdfModalPeriodId, setTeacherPdfModalPeriodId] = useState<string | undefined>(undefined);
+
+  const handleOpenTeacherPdfModal = (teacherId?: string, periodId?: string) => {
+    setTeacherPdfModalTeacherId(teacherId);
+    setTeacherPdfModalPeriodId(periodId);
+    setTeacherPdfModalOpen(true);
+  };
 
   // Simulated Email Notification System State
   const [simulatedEmailsModalOpen, setSimulatedEmailsModalOpen] = useState(false);
@@ -827,50 +839,49 @@ export default function App() {
     }));
 
     // 3. Ensure User account with role 'diretor' exists with login credentials
-    let provisionedUser: User;
-    setUsers(prev => {
-      const existingUser = prev.find(u => 
-        u.email.toLowerCase() === email.toLowerCase() || 
-        u.teacherId === targetTeacher.id ||
-        (teacherId && u.teacherId === teacherId)
-      );
+    const existingUser = users.find(u => 
+      u.email.toLowerCase() === email.toLowerCase() || 
+      u.teacherId === targetTeacher.id ||
+      (teacherId && u.teacherId === teacherId)
+    );
 
-      if (existingUser) {
-        provisionedUser = {
-          ...existingUser,
-          name: directorName,
-          email,
-          role: 'diretor' as UserRole,
-          roleTitle: `Diretor do ${dept.name}`,
-          departmentId,
-          teacherId: targetTeacher.id,
-          password: password,
-          status: 'Ativo',
-          appointedBy: currentUser.name,
-          appointedAt: new Date().toISOString(),
-        };
-        const updated = prev.map(u => u.id === existingUser.id ? provisionedUser : u);
-        StorageService.saveUsers(updated);
-        return updated;
-      } else {
-        provisionedUser = {
-          id: `usr-dir-${Date.now()}`,
-          name: directorName,
-          email,
-          role: 'diretor',
-          roleTitle: `Diretor do ${dept.name}`,
-          status: 'Ativo',
-          password: password,
-          departmentId,
-          teacherId: targetTeacher.id,
-          appointedBy: currentUser.name,
-          appointedAt: new Date().toISOString(),
-        };
-        const updated = [...prev, provisionedUser];
-        StorageService.saveUsers(updated);
-        return updated;
-      }
-    });
+    let provisionedUser: User;
+    let updatedUsersList: User[];
+
+    if (existingUser) {
+      provisionedUser = {
+        ...existingUser,
+        name: directorName,
+        email,
+        role: 'diretor' as UserRole,
+        roleTitle: `Diretor do ${dept.name}`,
+        departmentId,
+        teacherId: targetTeacher.id,
+        password: password,
+        status: 'Ativo',
+        appointedBy: currentUser.name,
+        appointedAt: new Date().toISOString(),
+      };
+      updatedUsersList = users.map(u => u.id === existingUser.id ? provisionedUser : u);
+    } else {
+      provisionedUser = {
+        id: `usr-dir-${Date.now()}`,
+        name: directorName,
+        email,
+        role: 'diretor',
+        roleTitle: `Diretor do ${dept.name}`,
+        status: 'Ativo',
+        password: password,
+        departmentId,
+        teacherId: targetTeacher.id,
+        appointedBy: currentUser.name,
+        appointedAt: new Date().toISOString(),
+      };
+      updatedUsersList = [...users, provisionedUser];
+    }
+
+    setUsers(updatedUsersList);
+    StorageService.saveUsers(updatedUsersList);
 
     logAudit('UPDATE', 'Departamento', departmentId, `Admin ${currentUser.name} nomeou o docente ${directorName} como Diretor do ${dept.name} com credenciais de acesso atribuídas.`);
     
@@ -878,14 +889,14 @@ export default function App() {
       id: `notif-${Date.now()}`,
       userId: currentUser.id,
       title: 'Diretor Nomeado com Sucesso',
-      message: `${directorName} é agora Diretor do ${dept.name}. As credenciais de acesso (${email}) foram geradas.`,
+      message: `${directorName} é agora Diretor do ${dept.name}. As credenciais de acesso (${email}) foram geradas e validadas.`,
       type: 'success',
       read: false,
       createdAt: new Date().toISOString(),
     };
     setNotifications(prev => [notif, ...prev]);
 
-    return { user: provisionedUser!, teacher: targetTeacher, password };
+    return { user: provisionedUser, teacher: targetTeacher, password };
   };
 
   // Admin-exclusive: Revoke Department Director
@@ -1006,52 +1017,51 @@ export default function App() {
     }));
 
     // 3. Ensure User account with role 'coordenador' exists with credentials
-    let provisionedUser: User;
-    setUsers(prev => {
-      const existingUser = prev.find(u => 
-        u.email.toLowerCase() === email.toLowerCase() || 
-        u.teacherId === targetTeacher.id ||
-        (teacherId && u.teacherId === teacherId)
-      );
+    const existingUser = users.find(u => 
+      u.email.toLowerCase() === email.toLowerCase() || 
+      u.teacherId === targetTeacher.id ||
+      (teacherId && u.teacherId === teacherId)
+    );
 
-      if (existingUser) {
-        provisionedUser = {
-          ...existingUser,
-          name: coordinatorName,
-          email,
-          role: 'coordenador' as UserRole,
-          roleTitle: `Coordenador de ${course.name}`,
-          courseId,
-          departmentId: course.departmentId,
-          teacherId: targetTeacher.id,
-          password: password,
-          status: 'Ativo',
-          appointedBy: currentUser.name,
-          appointedAt: new Date().toISOString(),
-        };
-        const updated = prev.map(u => u.id === existingUser.id ? provisionedUser : u);
-        StorageService.saveUsers(updated);
-        return updated;
-      } else {
-        provisionedUser = {
-          id: `usr-coord-${Date.now()}`,
-          name: coordinatorName,
-          email,
-          role: 'coordenador',
-          roleTitle: `Coordenador de ${course.name}`,
-          status: 'Ativo',
-          password: password,
-          courseId,
-          departmentId: course.departmentId,
-          teacherId: targetTeacher.id,
-          appointedBy: currentUser.name,
-          appointedAt: new Date().toISOString(),
-        };
-        const updated = [...prev, provisionedUser];
-        StorageService.saveUsers(updated);
-        return updated;
-      }
-    });
+    let provisionedUser: User;
+    let updatedUsersList: User[];
+
+    if (existingUser) {
+      provisionedUser = {
+        ...existingUser,
+        name: coordinatorName,
+        email,
+        role: 'coordenador' as UserRole,
+        roleTitle: `Coordenador de ${course.name}`,
+        courseId,
+        departmentId: course.departmentId,
+        teacherId: targetTeacher.id,
+        password: password,
+        status: 'Ativo',
+        appointedBy: currentUser.name,
+        appointedAt: new Date().toISOString(),
+      };
+      updatedUsersList = users.map(u => u.id === existingUser.id ? provisionedUser : u);
+    } else {
+      provisionedUser = {
+        id: `usr-coord-${Date.now()}`,
+        name: coordinatorName,
+        email,
+        role: 'coordenador',
+        roleTitle: `Coordenador de ${course.name}`,
+        status: 'Ativo',
+        password: password,
+        courseId,
+        departmentId: course.departmentId,
+        teacherId: targetTeacher.id,
+        appointedBy: currentUser.name,
+        appointedAt: new Date().toISOString(),
+      };
+      updatedUsersList = [...users, provisionedUser];
+    }
+
+    setUsers(updatedUsersList);
+    StorageService.saveUsers(updatedUsersList);
 
     logAudit('UPDATE', 'Curso', courseId, `Admin ${currentUser.name} nomeou o docente ${coordinatorName} como Coordenador do curso ${course.name} com credenciais de acesso atribuídas.`);
     
@@ -1059,14 +1069,14 @@ export default function App() {
       id: `notif-${Date.now()}`,
       userId: currentUser.id,
       title: 'Coordenador Nomeado com Sucesso',
-      message: `${coordinatorName} é agora Coordenador(a) do curso ${course.name}. Credenciais de acesso (${email}) atribuídas.`,
+      message: `${coordinatorName} é agora Coordenador(a) do curso ${course.name}. Credenciais de acesso (${email}) atribuídas e validadas.`,
       type: 'success',
       read: false,
       createdAt: new Date().toISOString(),
     };
     setNotifications(prev => [notif, ...prev]);
 
-    return { user: provisionedUser!, teacher: targetTeacher, password };
+    return { user: provisionedUser, teacher: targetTeacher, password };
   };
 
   // Admin-exclusive: Revoke Course Coordinator
@@ -1095,6 +1105,131 @@ export default function App() {
       createdAt: new Date().toISOString(),
     };
     setNotifications(prev => [notif, ...prev]);
+  };
+
+  // Profile & Credentials Authority: Save & Validate User Account
+  const handleSaveUser = (userData: Partial<User>): { success: boolean; user: User; message: string } => {
+    const rawName = (userData.name || '').trim();
+    const rawEmail = (userData.email || '').trim().toLowerCase();
+    const rawPassword = (userData.password || '').trim();
+    const role = (userData.role || 'docente') as UserRole;
+
+    if (!rawName) {
+      throw new Error('O nome do utilizador é obrigatório.');
+    }
+    if (!rawEmail || !rawEmail.includes('@')) {
+      throw new Error('E-mail institucional inválido. Deve conter o símbolo @.');
+    }
+    if (!rawPassword || rawPassword.length < 4) {
+      throw new Error('A palavra-passe deve conter pelo menos 4 caracteres.');
+    }
+
+    // Check duplicate email
+    const duplicate = users.find(u => u.email.toLowerCase() === rawEmail && u.id !== userData.id);
+    if (duplicate) {
+      throw new Error(`O e-mail "${rawEmail}" já se encontra atribuído a outro perfil (${duplicate.name}).`);
+    }
+
+    let savedUser: User;
+    let targetTeacherId = userData.teacherId;
+
+    // Academic roles linking: docente, diretor, coordenador
+    if (['docente', 'diretor', 'coordenador'].includes(role)) {
+      let linkedTeacher = targetTeacherId ? teachers.find(t => t.id === targetTeacherId) : teachers.find(t => t.email.toLowerCase() === rawEmail);
+      if (!linkedTeacher) {
+        const newTeacherId = `tch-${Date.now()}`;
+        const newTeacher: Teacher = {
+          id: newTeacherId,
+          code: `DOC-${Math.floor(100 + Math.random() * 900)}`,
+          name: rawName,
+          gender: 'Masculino',
+          birthDate: '1980-01-01',
+          email: rawEmail,
+          phone: '+351 910 000 000',
+          departmentId: userData.departmentId || departments[0]?.id || 'dep-inf',
+          category: userData.roleTitle || (role === 'diretor' ? 'Professor Catedrático' : role === 'coordenador' ? 'Professor Associado' : 'Professor Auxiliar'),
+          specialization: `Serviço Docente - ${role.toUpperCase()}`,
+          contractType: 'Tempo Integral',
+          workloadLimit: 16,
+          currentWorkload: 0,
+          status: 'Ativo',
+          entryDate: new Date().toISOString().slice(0, 10),
+        };
+        const updatedTeachers = [newTeacher, ...teachers];
+        setTeachers(updatedTeachers);
+        StorageService.saveTeachers(updatedTeachers);
+        targetTeacherId = newTeacherId;
+      } else {
+        targetTeacherId = linkedTeacher.id;
+      }
+    }
+
+    if (userData.id) {
+      savedUser = {
+        ...(users.find(u => u.id === userData.id) || {}),
+        ...userData,
+        name: rawName,
+        email: rawEmail,
+        password: rawPassword,
+        role,
+        teacherId: targetTeacherId,
+        status: userData.status || 'Ativo',
+      } as User;
+      const updatedList = users.map(u => u.id === userData.id ? savedUser : u);
+      setUsers(updatedList);
+      StorageService.saveUsers(updatedList);
+      logAudit('UPDATE', 'Perfil', savedUser.id, `Perfil de ${savedUser.name} (${savedUser.role}) atualizado com credenciais validadas.`);
+    } else {
+      const newUserId = `usr-${role}-${Date.now()}`;
+      savedUser = {
+        id: newUserId,
+        name: rawName,
+        email: rawEmail,
+        role,
+        roleTitle: userData.roleTitle || (role === 'admin' ? 'Administrador do Sistema' : role === 'gestor' ? 'Gestor de Horários' : role === 'diretor' ? 'Diretor de Departamento' : role === 'coordenador' ? 'Coordenador de Curso' : role === 'docente' ? 'Docente' : 'Estudante'),
+        status: userData.status || 'Ativo',
+        password: rawPassword,
+        departmentId: userData.departmentId,
+        courseId: userData.courseId,
+        teacherId: targetTeacherId,
+        appointedBy: `${currentUser.name} (Admin)`,
+        appointedAt: new Date().toISOString(),
+      };
+      const updatedList = [...users, savedUser];
+      setUsers(updatedList);
+      StorageService.saveUsers(updatedList);
+      logAudit('CREATE', 'Perfil', savedUser.id, `Novo perfil criado para ${savedUser.name} (${savedUser.role}) com credenciais ativas e validadas.`);
+    }
+
+    return {
+      success: true,
+      user: savedUser,
+      message: `Perfil de ${savedUser.name} salvo e credenciais validadas com sucesso!`,
+    };
+  };
+
+  // Profile Deletion Authority
+  const handleDeleteUser = (userId: string): { success: boolean; message: string } => {
+    if (currentUser.id === userId) {
+      throw new Error('Não é permitido eliminar o próprio perfil com sessão iniciada.');
+    }
+    const target = users.find(u => u.id === userId);
+    if (!target) {
+      throw new Error('Perfil não encontrado no sistema.');
+    }
+    if (target.role === 'admin' && users.filter(u => u.role === 'admin').length <= 1) {
+      throw new Error('Não é possível eliminar o único Administrador do sistema.');
+    }
+
+    const updatedList = users.filter(u => u.id !== userId);
+    setUsers(updatedList);
+    StorageService.saveUsers(updatedList);
+    logAudit('DELETE', 'Perfil', userId, `Perfil de ${target.name} (${target.email}) eliminado pelo Administrador.`);
+
+    return {
+      success: true,
+      message: `Perfil de ${target.name} eliminado com sucesso.`,
+    };
   };
 
   // Save Department with Admin Protection
@@ -1382,6 +1517,7 @@ export default function App() {
     return (
       <LoginScreen
         users={users}
+        teachers={teachers}
         defaultUser={currentUser}
         onLoginSuccess={handleLoginSuccess}
       />
@@ -1484,6 +1620,7 @@ export default function App() {
                 };
                 setNotifications(prev => [notif, ...prev]);
               }}
+              onOpenTeacherPdfModal={handleOpenTeacherPdfModal}
             />
           )}
 
@@ -1514,6 +1651,7 @@ export default function App() {
               onRequestChange={item => {
                 setCurrentTab('change_requests');
               }}
+              onOpenTeacherPdfModal={handleOpenTeacherPdfModal}
             />
           )}
 
@@ -1562,6 +1700,7 @@ export default function App() {
               onSaveTeacher={handleSaveTeacher}
               onDeleteTeacher={handleDeleteTeacher}
               onResetTeacherPassword={handleResetTeacherPassword}
+              onOpenTeacherPdfModal={handleOpenTeacherPdfModal}
             />
           )}
 
@@ -1693,6 +1832,7 @@ export default function App() {
                 };
                 setNotifications(prev => [notif, ...prev]);
               }}
+              onOpenTeacherPdfModal={handleOpenTeacherPdfModal}
             />
           )}
 
@@ -1720,6 +1860,8 @@ export default function App() {
               onRevokeDirector={handleRevokeDirector}
               onRevokeCoordinator={handleRevokeCoordinator}
               onSwitchUser={handleSwitchUser}
+              onSaveUser={handleSaveUser}
+              onDeleteUser={handleDeleteUser}
               onLogAudit={(action, entity, entityId, details) => {
                 logAudit(action as any, entity, entityId, details);
               }}
@@ -1770,6 +1912,38 @@ export default function App() {
         availabilities={availabilities}
         existingSchedules={schedules}
         periodId={periods[0]?.id || ''}
+      />
+
+      {/* Teacher Schedule PDF Generation Modal (RN06 & Official Academic Print) */}
+      <TeacherSchedulePdfModal
+        isOpen={teacherPdfModalOpen}
+        onClose={() => {
+          setTeacherPdfModalOpen(false);
+          setTeacherPdfModalTeacherId(undefined);
+          setTeacherPdfModalPeriodId(undefined);
+        }}
+        currentUser={currentUser}
+        teachers={teachers}
+        periods={periods}
+        schedules={schedules}
+        subjects={subjects}
+        classes={classes}
+        rooms={rooms}
+        departments={departments}
+        defaultTeacherId={teacherPdfModalTeacherId}
+        defaultPeriodId={teacherPdfModalPeriodId}
+        onNotify={(title, message, type) => {
+          const notif: NotificationItem = {
+            id: `notif-${Date.now()}`,
+            userId: currentUser.id,
+            title,
+            message,
+            type,
+            read: false,
+            createdAt: new Date().toISOString(),
+          };
+          setNotifications(prev => [notif, ...prev]);
+        }}
       />
 
       {/* 30-Minute Inactivity Session Lock Screen */}

@@ -24,6 +24,7 @@ interface ReportsViewProps {
   changeRequests?: ChangeRequest[];
   periods?: AcademicPeriod[];
   onExportSuccess?: () => void;
+  onOpenTeacherPdfModal?: (teacherId?: string) => void;
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
@@ -38,6 +39,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   changeRequests = [],
   periods = [],
   onExportSuccess,
+  onOpenTeacherPdfModal,
 }) => {
   const [reportType, setReportType] = useState<'dept_occupancy' | 'occupancy' | 'workload'>('dept_occupancy');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -171,11 +173,22 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {onOpenTeacherPdfModal && (
+              <button
+                id="btn-reports-teacher-pdf"
+                onClick={() => onOpenTeacherPdfModal()}
+                className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Gerar e imprimir Grade Horária Individual de Docente em PDF com auditoria RN06"
+              >
+                <FileDown className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Grade Docente (PDF)</span>
+              </button>
+            )}
             {isManager && (
               <button
                 id="btn-reports-export-dashboard-pdf"
                 onClick={() => setIsExportModalOpen(true)}
-                className="px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+                className="px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                 title="Exportar Relatório Consolidado do Dashboard em PDF"
               >
                 <FileDown className="w-3.5 h-3.5" />
@@ -184,14 +197,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             )}
             <button
               onClick={() => window.print()}
-              className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5 text-slate-500" />
               <span>Imprimir / PDF</span>
             </button>
             <button
               onClick={exportCurrentReport}
-              className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+              className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Exportar Excel (CSV)</span>
@@ -269,6 +282,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 <th className="py-3 px-4">Aulas Semanais</th>
                 <th className="py-3 px-4">Utilização (%)</th>
                 <th className="py-3 px-4">Estado</th>
+                <th className="py-3 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -305,6 +319,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-800">
                         Regular
                       </span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    {onOpenTeacherPdfModal && (
+                      <button
+                        onClick={() => onOpenTeacherPdfModal(t.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors cursor-pointer"
+                        title={`Imprimir Grade Horária de ${t.name} em PDF`}
+                      >
+                        <FileDown className="w-3 h-3 text-emerald-600" />
+                        <span>Grade PDF</span>
+                      </button>
                     )}
                   </td>
                 </tr>
