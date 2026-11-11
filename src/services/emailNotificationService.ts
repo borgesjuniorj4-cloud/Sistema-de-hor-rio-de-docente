@@ -47,7 +47,8 @@ export interface SimulatedEmail {
   bodyHtml: string;
 }
 
-const STORAGE_KEY = 'universidade_tobas_simulated_emails';
+const STORAGE_KEY = 'universidade_licungo_simulated_emails';
+const LEGACY_STORAGE_KEY = 'universidade_tobas_simulated_emails';
 const MAX_STORED_EMAILS = 120;
 
 /**
@@ -55,7 +56,7 @@ const MAX_STORED_EMAILS = 120;
  */
 export function getStoredSimulatedEmails(): SimulatedEmail[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -238,33 +239,33 @@ export function sendScheduleEmailNotification(params: SendScheduleEmailParams): 
     : undefined;
 
   let typeLabel = 'Nova Aula Atribuída';
-  let emailSubject = `[Universidade Tobas] Atribuição de Nova Aula: ${subjectName} (${className})`;
+  let emailSubject = `[Universidade Licungo] Atribuição de Nova Aula: ${subjectName} (${className})`;
   let headerTitle = 'Nova Aula Atribuída à Sua Grade Horária';
-  let actionIntro = `Informamos que foi atribuída uma nova aula à sua distribuição de serviço docente na Universidade Tobas.`;
+  let actionIntro = `Informamos que foi atribuída uma nova aula à sua distribuição de serviço docente na Universidade Licungo.`;
   let badgeColor = '#4f46e5'; // Indigo
 
   if (type === 'UPDATED_LESSON') {
     typeLabel = 'Alteração de Horário';
-    emailSubject = `[Universidade Tobas] Alteração de Horário: ${subjectName} (${className})`;
+    emailSubject = `[Universidade Licungo] Alteração de Horário: ${subjectName} (${className})`;
     headerTitle = 'Atualização na Sua Grade Horária';
-    actionIntro = `Informamos que foram introduzidas alterações a uma aula da sua grade horária na Universidade Tobas.`;
+    actionIntro = `Informamos que foram introduzidas alterações a uma aula da sua grade horária na Universidade Licungo.`;
     badgeColor = '#0284c7'; // Sky / Blue
   } else if (type === 'REQUEST_APPROVED') {
     typeLabel = 'Solicitação Aprovada';
-    emailSubject = `[Universidade Tobas] Pedido de Ajuste Aprovado: ${subjectName} (${className})`;
+    emailSubject = `[Universidade Licungo] Pedido de Ajuste Aprovado: ${subjectName} (${className})`;
     headerTitle = 'Pedido de Ajuste de Horário Deferido';
     actionIntro = `A sua solicitação de ajuste de horário foi aprovada e as novas coordenadas letivas já se encontram atualizadas na grade oficial.`;
     badgeColor = '#059669'; // Emerald
   } else if (type === 'REMOVED_LESSON') {
     typeLabel = 'Aula Desatribuída';
-    emailSubject = `[Universidade Tobas] Desatribuição de Aula: ${subjectName} (${className})`;
+    emailSubject = `[Universidade Licungo] Desatribuição de Aula: ${subjectName} (${className})`;
     headerTitle = 'Remoção / Cancelamento de Aula';
     actionIntro = `Informamos que a aula abaixo descrita foi desatribuída da sua grade horária oficial.`;
     badgeColor = '#e11d48'; // Rose
   }
 
-  const senderAddress = 'Universidade Tobas - SGHD <notificacoes.horarios@tobas.edu>';
-  const recipientEmail = teacher.email || `${teacher.name.toLowerCase().replace(/\s+/g, '.')}@tobas.edu`;
+  const senderAddress = 'Universidade Licungo - SGHD <notificacoes.horarios@licungo.ac.mz>';
+  const recipientEmail = teacher.email || `${teacher.name.toLowerCase().replace(/\s+/g, '.')}@licungo.ac.mz`;
   const sentAt = new Date().toISOString();
   const formattedDate = new Intl.DateTimeFormat('pt-PT', {
     dateStyle: 'full',
@@ -273,7 +274,7 @@ export function sendScheduleEmailNotification(params: SendScheduleEmailParams): 
 
   // Plain text preview
   const bodyText = `
-UNIVERSIDADE TOBAS - SISTEMA DE GESTÃO DE HORÁRIOS DE DOCENTES (SGHD)
+UNIVERSIDADE LICUNGO - SISTEMA DE GESTÃO DE HORÁRIOS DE DOCENTES (SGHD)
 Campus Central • Notificação Oficial de Horário
 
 Exmo(a). Prof(a). ${teacher.name},
@@ -296,11 +297,11 @@ ${customReason ? `\nMotivo do Ajuste: ${customReason}` : ''}
 Responsável pela Operação: ${currentUser.name} (${currentUser.role})
 Data/Hora de Emissão: ${formattedDate}
 
-Poderá consultar a sua grade horária completa e sincronizada acedendo ao portal SGHD da Universidade Tobas.
+Poderá consultar a sua grade horária completa e sincronizada acedendo ao portal SGHD da Universidade Licungo.
 
 Com os melhores cumprimentos,
 Serviços Académicos e Gestão Curricular
-Universidade Tobas
+Universidade Licungo
 `.trim();
 
   // HTML content formatted like an institutional university email
@@ -342,7 +343,7 @@ Universidade Tobas
 <body>
   <div class="email-card">
     <div class="email-header">
-      <h1>Universidade Tobas • SGHD</h1>
+      <h1>Universidade Licungo • SGHD</h1>
       <h2>${headerTitle}</h2>
       <span class="badge">${typeLabel}</span>
     </div>
@@ -428,9 +429,9 @@ Universidade Tobas
     </div>
 
     <div class="email-footer">
-      <p><strong>Universidade Tobas</strong> • Direção de Serviços Académicos e Gestão de Horários</p>
+      <p><strong>Universidade Licungo</strong> • Direção de Serviços Académicos e Gestão de Horários</p>
       <p>Emissor do Processo: ${currentUser.name} (${currentUser.role}) | Data de Envio: ${formattedDate}</p>
-      <div class="security-stamp">SGHD EMAIL DISPATCH SIMULATOR • UNIVERSIDADE TOBAS ID: ${schedule.id}</div>
+      <div class="security-stamp">SGHD EMAIL DISPATCH SIMULATOR • UNIVERSIDADE LICUNGO ID: ${schedule.id}</div>
       <p style="margin-top:8px; font-size:10px; color:#94a3b8;">
         Esta é uma mensagem eletrónica automática institucional gerada pelo sistema SGHD. A informação contida é confidencial e destinada exclusivamente ao docente designado.
       </p>

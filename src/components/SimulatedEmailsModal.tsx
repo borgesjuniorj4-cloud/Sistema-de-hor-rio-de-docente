@@ -149,7 +149,7 @@ export const SimulatedEmailsModal: React.FC<SimulatedEmailsModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Registo de mensagens de correio institucional enviadas pela Universidade Tobas ao atribuir ou alterar horários.
+                Registo de mensagens de correio institucional enviadas pela Universidade Licungo ao atribuir ou alterar horários.
               </p>
             </div>
           </div>
@@ -397,7 +397,7 @@ export const SimulatedEmailsModal: React.FC<SimulatedEmailsModalProps> = ({
         <div className="p-3 sm:px-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Universidade Tobas • Notificador Automático de Grade Horária</span>
+            <span>Universidade Licungo • Notificador Automático de Grade Horária</span>
           </div>
           <button
             onClick={onClose}

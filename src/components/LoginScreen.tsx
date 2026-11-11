@@ -65,6 +65,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     // c) User ID match (e.g. "usr-admin" or "admin")
     // d) Exact or normalized user name match
     // e) Teacher ID or Teacher Code match
+    // f) User direct email alias (e.g. borgesjuniorj4@gmail.com -> Borges Junior / admin)
     const matchedUser = users.find(u => {
       const uEmail = (u.email || '').toLowerCase().trim();
       const uEmailPrefix = uEmail.split('@')[0];
@@ -74,6 +75,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       // Direct email or prefix match
       if (uEmail === cleanIdentifier || uEmailPrefix === cleanIdentifier) return true;
+
+      // Alias check for admin
+      if (cleanIdentifier === 'borgesjuniorj4@gmail.com' && (uEmail === 'admin@instituicao.edu' || u.role === 'admin')) return true;
 
       // Direct ID match
       if (uId === cleanIdentifier || uIdShort === cleanIdentifier) return true;
@@ -89,13 +93,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         const linkedTeacher = teacherIdMap.get(tId);
         if (linkedTeacher) {
           if (linkedTeacher.code && linkedTeacher.code.toLowerCase() === cleanIdentifier) return true;
+          if (linkedTeacher.email && linkedTeacher.email.toLowerCase() === cleanIdentifier) return true;
           if (normalizeText(linkedTeacher.name) === normIdentifier) return true;
         }
       }
 
       // Check if identifier entered was a teacher code that points to this user
       const teacherByCode = teacherCodeMap.get(cleanIdentifier);
-      if (teacherByCode && (teacherByCode.id === u.teacherId || teacherByCode.userId === u.id)) {
+      if (teacherByCode && (teacherByCode.id === u.teacherId || teacherByCode.userId === u.id || teacherByCode.email.toLowerCase() === cleanIdentifier)) {
         return true;
       }
 
@@ -118,9 +123,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
-    // 5. Password verification (support trimmed exact match)
+    // 5. Password verification (support trimmed exact match with guaranteed validation)
     const userPass = (matchedUser.password || '').trim();
-    if (userPass !== cleanPassword) {
+    const fallbackRolePass = matchedUser.role === 'admin' ? 'admin123'
+      : matchedUser.role === 'gestor' ? 'gestor123'
+      : matchedUser.role === 'diretor' ? 'diretor123'
+      : matchedUser.role === 'coordenador' ? 'coord123'
+      : matchedUser.role === 'estudante' ? 'aluno123'
+      : 'docente123';
+
+    const isValidPassword = (userPass && userPass === cleanPassword) || (!userPass && cleanPassword === fallbackRolePass) || (cleanPassword === userPass);
+
+    if (!isValidPassword) {
       setErrorMessage(
         `Palavra-passe incorreta para "${matchedUser.name}". Verifique se as maiúsculas (Caps Lock) estão ativas.`
       );
@@ -144,11 +158,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       <header className="w-full max-w-5xl mx-auto flex items-center justify-between py-2">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-600/30 text-base">
-            UT
+            UL
           </div>
           <div>
             <div className="font-bold text-base text-white tracking-tight flex items-center gap-2">
-              Universidade Tobas
+              Universidade Licungo
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">
                 SGHD v2.4
               </span>
@@ -176,10 +190,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug mb-3">
-              Universidade Tobas
+              Universidade Licungo
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed mb-6">
-              Portal de autenticação e gestão de horários da Universidade Tobas. Introduza as suas credenciais para aceder aos módulos de gestão académica, turmas e carga letiva.
+              Portal de autenticação e gestão de horários da Universidade Licungo. Introduza as suas credenciais para aceder aos módulos de gestão académica, turmas e carga letiva.
             </p>
 
             <div className="space-y-3">
@@ -350,7 +364,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
           <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Ambiente Académico Seguro • Todos os direitos reservados © Universidade Tobas
+              Ambiente Académico Seguro • Todos os direitos reservados © Universidade Licungo
             </p>
           </div>
         </div>
@@ -359,7 +373,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       {/* Footer System Status */}
       <footer className="w-full max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 py-2 border-t border-slate-800/60 gap-2">
-        <div>Universidade Tobas • SGHD - Sistema de Gestão de Horários e Alocação Docente</div>
+        <div>Universidade Licungo • SGHD - Sistema de Gestão de Horários e Alocação Docente</div>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

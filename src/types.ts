@@ -112,12 +112,14 @@ export interface Room {
 
 export interface AcademicPeriod {
   id: string;
-  academicYear: string; // e.g. '2026/2027'
+  academicYear: string; // e.g. '2026'
   semester: string; // '1.º Semestre' | '2.º Semestre'
-  startDate: string;
-  endDate: string;
+  startDate: string; // e.g. '2026-03-02'
+  endDate: string; // e.g. '2026-08-07'
   isCurrent: boolean;
   status: 'Ativo' | 'Planeamento' | 'Encerrado';
+  weeksCount?: number; // e.g. 16 semanas
+  description?: string;
 }
 
 export type DayOfWeek = 'Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta' | 'Sábado';

@@ -28,20 +28,29 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>(
     currentTeacherId || teachers[0]?.id || ''
   );
+  const [selectedShift, setSelectedShift] = useState<'all' | 'morning' | 'afternoon'>('all');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Local editable copy of current selected teacher's grid
-  const selectedTeacher = teachers.find(t => t.id === selectedTeacherId) || teachers[0];
+  const activeTeacherId = isDocente ? (currentTeacherId || selectedTeacherId) : selectedTeacherId;
+  const selectedTeacher = teachers.find(t => t.id === activeTeacherId) || (isDocente ? teachers.find(t => t.id === currentTeacherId) : teachers[0]);
+
+  const visibleSlots = TIME_SLOTS.filter(slot => {
+    const [startH] = slot.split(':').map(Number);
+    if (selectedShift === 'morning') return startH < 12;
+    if (selectedShift === 'afternoon') return startH >= 12;
+    return true;
+  });
 
   const getStatus = (day: DayOfWeek, slot: string): AvailabilityStatus => {
-    if (!selectedTeacher) return 'Disponível';
+    if (!activeTeacherId) return 'Disponível';
     const record = availabilities.find(
-      a => a.teacherId === selectedTeacher.id && a.dayOfWeek === day && a.timeSlot === slot
+      a => a.teacherId === activeTeacherId && a.dayOfWeek === day && a.timeSlot === slot
     );
     return record ? record.status : 'Disponível';
   };
 
   const handleToggleSlot = (day: DayOfWeek, slot: string) => {
+    if (!activeTeacherId) return;
     // Cycle: Disponível -> Indisponível -> Preferencial -> Disponível
     const current = getStatus(day, slot);
     let next: AvailabilityStatus = 'Indisponível';
@@ -51,7 +60,7 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
 
     // Build updated array
     const existingIndex = availabilities.findIndex(
-      a => a.teacherId === selectedTeacher.id && a.dayOfWeek === day && a.timeSlot === slot
+      a => a.teacherId === activeTeacherId && a.dayOfWeek === day && a.timeSlot === slot
     );
 
     let updated: TeacherAvailability[];
@@ -78,12 +87,13 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
   };
 
   const handleSetAll = (status: AvailabilityStatus) => {
+    if (!activeTeacherId) return;
     const newItems: TeacherAvailability[] = [];
     for (const day of DAYS_OF_WEEK) {
       for (const slot of TIME_SLOTS) {
         newItems.push({
           id: `av-${Date.now()}-${day}-${slot}`,
-          teacherId: selectedTeacher.id,
+          teacherId: activeTeacherId,
           dayOfWeek: day,
           timeSlot: slot,
           status,
@@ -92,8 +102,8 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
     }
 
     // Replace all for this teacher
-    const remaining = availabilities.filter(a => a.teacherId !== selectedTeacher.id);
-    onSaveAvailabilities(selectedTeacher.id, [...remaining, ...newItems]);
+    const remaining = availabilities.filter(a => a.teacherId !== activeTeacherId);
+    onSaveAvailabilities(activeTeacherId, [...remaining, ...newItems]);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };
@@ -147,8 +157,51 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
           )}
         </div>
 
+        {/* Shift Filter Toolbar and Information Banner */}
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg self-start">
+            <button
+              onClick={() => setSelectedShift('all')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                selectedShift === 'all'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Todos os Tempos (13 tempos)
+            </button>
+            <button
+              onClick={() => setSelectedShift('morning')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${
+                selectedShift === 'morning'
+                  ? 'bg-white text-amber-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🌅 Manhã</span>
+              <span className="text-[10px] font-normal text-slate-500">(07:00 - 11:50)</span>
+            </button>
+            <button
+              onClick={() => setSelectedShift('afternoon')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1 ${
+                selectedShift === 'afternoon'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>☀️ Tarde</span>
+              <span className="text-[10px] font-normal text-slate-500">(12:00 - 17:50)</span>
+            </button>
+          </div>
+
+          <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-2">
+            <span className="font-semibold text-slate-700">Regulamento dos Turnos:</span>
+            <span>Aulas de 50 min • Intervalo de 15 min às <strong>09:30-09:45</strong> (Manhã) e <strong>14:30-14:45</strong> (Tarde)</span>
+          </div>
+        </div>
+
         {/* Legend & Batch Actions */}
-        <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           
           <div className="flex items-center gap-4 text-xs">
             <span className="font-semibold text-slate-500">Legenda:</span>
@@ -184,7 +237,7 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
         </div>
       </div>
 
-      {/* Interactive Availability Timetable (Matching PDF page 13) */}
+      {/* Interactive Availability Timetable */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[700px]">
@@ -193,7 +246,7 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
                 <th className="py-3 px-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider w-36 border-r border-slate-200">
                   Dia da Semana
                 </th>
-                {TIME_SLOTS.map(slot => (
+                {visibleSlots.map(slot => (
                   <th key={slot} className="py-3 px-3 text-center text-xs font-bold text-slate-700 border-r border-slate-200 last:border-r-0 font-mono">
                     {slot}
                   </th>
@@ -207,7 +260,7 @@ export const AvailabilityView: React.FC<AvailabilityViewProps> = ({
                     {day}-feira
                   </td>
 
-                  {TIME_SLOTS.map(slot => {
+                  {visibleSlots.map(slot => {
                     const status = getStatus(day, slot);
 
                     return (

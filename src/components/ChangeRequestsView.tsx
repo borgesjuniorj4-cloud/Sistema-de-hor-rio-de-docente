@@ -54,8 +54,8 @@ export const ChangeRequestsView: React.FC<ChangeRequestsViewProps> = ({
   // New request form state
   const [selectedScheduleId, setSelectedScheduleId] = useState('');
   const [newDay, setNewDay] = useState<DayOfWeek>('Segunda');
-  const [newStartTime, setNewStartTime] = useState('10:00');
-  const [newEndTime, setNewEndTime] = useState('12:00');
+  const [newStartTime, setNewStartTime] = useState('07:00');
+  const [newEndTime, setNewEndTime] = useState('07:50');
   const [reason, setReason] = useState('');
 
   // Review comment modal state
@@ -85,8 +85,8 @@ export const ChangeRequestsView: React.FC<ChangeRequestsViewProps> = ({
       setSelectedScheduleId(availableSchedules[0].id);
     }
     setNewDay('Segunda');
-    setNewStartTime('10:00');
-    setNewEndTime('12:00');
+    setNewStartTime('07:00');
+    setNewEndTime('07:50');
     setReason('');
     setIsNewModalOpen(true);
   };
@@ -341,21 +341,45 @@ export const ChangeRequestsView: React.FC<ChangeRequestsViewProps> = ({
                 <div>
                   <label className="block font-semibold mb-1">Hora Inicial *</label>
                   <select value={newStartTime} onChange={e => setNewStartTime(e.target.value)} className="w-full border rounded p-2 text-xs font-mono">
-                    <option value="08:00">08:00</option>
-                    <option value="10:00">10:00</option>
-                    <option value="14:00">14:00</option>
-                    <option value="16:00">16:00</option>
-                    <option value="18:00">18:00</option>
+                    <optgroup label="Manhã (07:00 - 11:50)">
+                      <option value="07:00">07:00 (1.º Tempo)</option>
+                      <option value="07:50">07:50 (2.º Tempo)</option>
+                      <option value="08:40">08:40 (3.º Tempo)</option>
+                      <option value="09:45">09:45 (4.º Tempo - pós int.)</option>
+                      <option value="10:35">10:35 (5.º Tempo)</option>
+                      <option value="11:00">11:00 (6.º Tempo)</option>
+                    </optgroup>
+                    <optgroup label="Tarde (12:00 - 17:50)">
+                      <option value="12:00">12:00 (1.º Tempo)</option>
+                      <option value="12:50">12:50 (2.º Tempo)</option>
+                      <option value="13:40">13:40 (3.º Tempo)</option>
+                      <option value="14:45">14:45 (4.º Tempo - pós int.)</option>
+                      <option value="15:35">15:35 (5.º Tempo)</option>
+                      <option value="16:25">16:25 (6.º Tempo)</option>
+                      <option value="17:00">17:00 (7.º Tempo)</option>
+                    </optgroup>
                   </select>
                 </div>
                 <div>
                   <label className="block font-semibold mb-1">Hora Final *</label>
                   <select value={newEndTime} onChange={e => setNewEndTime(e.target.value)} className="w-full border rounded p-2 text-xs font-mono">
-                    <option value="10:00">10:00</option>
-                    <option value="12:00">12:00</option>
-                    <option value="16:00">16:00</option>
-                    <option value="18:00">18:00</option>
-                    <option value="20:00">20:00</option>
+                    <optgroup label="Manhã (07:00 - 11:50)">
+                      <option value="07:50">07:50 (Fim 1.º)</option>
+                      <option value="08:40">08:40 (Fim 2.º / Bloco 100m)</option>
+                      <option value="09:30">09:30 (Fim 3.º / Início Int.)</option>
+                      <option value="10:35">10:35 (Fim 4.º)</option>
+                      <option value="11:25">11:25 (Fim 5.º)</option>
+                      <option value="11:50">11:50 (Término Manhã)</option>
+                    </optgroup>
+                    <optgroup label="Tarde (12:00 - 17:50)">
+                      <option value="12:50">12:50 (Fim 1.º)</option>
+                      <option value="13:40">13:40 (Fim 2.º / Bloco 100m)</option>
+                      <option value="14:30">14:30 (Fim 3.º / Início Int.)</option>
+                      <option value="15:35">15:35 (Fim 4.º)</option>
+                      <option value="16:25">16:25 (Fim 5.º)</option>
+                      <option value="17:15">17:15 (Fim 6.º)</option>
+                      <option value="17:50">17:50 (Término Tarde)</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>

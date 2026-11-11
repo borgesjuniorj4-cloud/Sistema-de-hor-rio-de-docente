@@ -285,6 +285,16 @@ export default function App() {
     return undefined;
   }, [currentUser, isGlobalManager, teachers, departments, courses]);
 
+  // Strictly resolved teacher ID for authenticated user confidentiality
+  const effectiveTeacherId = useMemo(() => {
+    if (currentUser.teacherId) return currentUser.teacherId;
+    const byEmail = teachers.find(t => 
+      (currentUser.email && t.email && t.email.toLowerCase() === currentUser.email.toLowerCase()) || 
+      (t.userId && t.userId === currentUser.id)
+    );
+    return byEmail?.id;
+  }, [currentUser, teachers]);
+
   // Switch role helper
   const handleSwitchRole = (role: UserRole) => {
     const userForRole = users.find(u => u.role === role) || INITIAL_USERS.find(u => u.role === role) || {
@@ -461,7 +471,7 @@ export default function App() {
                 rooms,
                 periods,
                 currentUser,
-                additionalNote: 'Aula atribuída à sua grade horária na Universidade Tobas.',
+                additionalNote: 'Aula atribuída à sua grade horária na Universidade Licungo.',
               });
             }
           } else {
@@ -1452,8 +1462,8 @@ export default function App() {
       academicPeriodId: periods[0]?.id || 'period-2026-1',
       periodId: periods[0]?.id || 'period-2026-1',
       dayOfWeek: 'Segunda',
-      startTime: '08:00',
-      endTime: '10:00',
+      startTime: '07:00',
+      endTime: '08:40',
       lessonType: 'Prática',
       status: 'Em validação',
       createdAt: new Date().toISOString(),
@@ -1582,7 +1592,7 @@ export default function App() {
             <Dashboard
               currentUser={currentUser}
               userRole={currentUser.role}
-              currentTeacherId={currentUser.teacherId}
+              currentTeacherId={effectiveTeacherId}
               currentClassId={currentUser.classId}
               departments={departments}
               courses={courses}

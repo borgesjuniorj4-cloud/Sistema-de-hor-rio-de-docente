@@ -169,10 +169,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm">
-            UT
+            UL
           </div>
           <div>
-            <h2 className="text-xs font-bold text-white tracking-wide uppercase">Universidade Tobas</h2>
+            <h2 className="text-xs font-bold text-white tracking-wide uppercase">Universidade Licungo</h2>
             <p className="text-[10px] text-slate-400">Campus Central • Gestão SGHD</p>
           </div>
         </div>
@@ -254,7 +254,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="fixed inset-0 z-50 lg:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label="Menu de navegação da Universidade Tobas"
+          aria-label="Menu de navegação da Universidade Licungo"
         >
           <div 
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200" 

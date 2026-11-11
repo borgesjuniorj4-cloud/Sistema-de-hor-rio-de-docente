@@ -844,7 +844,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const fullText = `UNIVERSIDADE TOBAS - SGHD - CREDENCIAIS DE ACESSO INSTITUCIONAL\nDocente: ${newlyCreatedCredentials.teacher.name}\nUtilizador / Email: ${newlyCreatedCredentials.user.email}\nPalavra-passe: ${newlyCreatedCredentials.password}\nPerfil: Docente\n\nPor motivos de segurança, guarde estas credenciais com confidencialidade.`;
+                    const fullText = `UNIVERSIDADE LICUNGO - SGHD - CREDENCIAIS DE ACESSO INSTITUCIONAL\nDocente: ${newlyCreatedCredentials.teacher.name}\nUtilizador / Email: ${newlyCreatedCredentials.user.email}\nPalavra-passe: ${newlyCreatedCredentials.password}\nPerfil: Docente\n\nPor motivos de segurança, guarde estas credenciais com confidencialidade.`;
                     handleCopyText(fullText, 'all');
                   }}
                   className="w-full sm:w-auto px-4 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
@@ -1048,7 +1048,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                     const currentEmail = userForTeacher?.email || credentialViewTeacher.email;
                     const currentPassword = userForTeacher?.password || 'Doc#Padrao2025';
 
-                    const fullText = `UNIVERSIDADE TOBAS - SGHD - CREDENCIAIS DE ACESSO INSTITUCIONAL\nDocente: ${credentialViewTeacher.name}\nUtilizador / Email: ${currentEmail}\nPalavra-passe: ${currentPassword}\nPerfil: Docente`;
+                    const fullText = `UNIVERSIDADE LICUNGO - SGHD - CREDENCIAIS DE ACESSO INSTITUCIONAL\nDocente: ${credentialViewTeacher.name}\nUtilizador / Email: ${currentEmail}\nPalavra-passe: ${currentPassword}\nPerfil: Docente`;
                     handleCopyText(fullText, 'view-all');
                   }}
                   className="w-full sm:w-auto px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"

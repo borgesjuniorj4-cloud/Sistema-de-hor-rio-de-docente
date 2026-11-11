@@ -407,7 +407,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
                 <div className="bg-slate-900 text-white p-4 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-bold tracking-wide">UNIVERSIDADE TOBAS - CAMPUS CENTRAL</h4>
+                      <h4 className="text-sm font-bold tracking-wide">UNIVERSIDADE LICUNGO - CAMPUS CENTRAL</h4>
                       <p className="text-[11px] text-slate-300">SGHD • Sistema de Gestão de Horários e Alocação Docente</p>
                     </div>
                     <div className="text-right text-[10px] text-slate-300">

@@ -132,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 dark:text-white tracking-tight text-base sm:text-lg">Universidade Tobas</span>
+                <span className="font-bold text-slate-900 dark:text-white tracking-tight text-base sm:text-lg">Universidade Licungo</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium border border-indigo-100 dark:border-indigo-800 hidden sm:inline-block">
                   SGHD • 2026/1º Semestre
                 </span>
@@ -239,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="btn-navbar-emails"
                 onClick={onOpenSimulatedEmails}
                 className="relative p-2 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                title="E-mails aos Docentes (Serviço Simulado da Universidade Tobas)"
+                title="E-mails aos Docentes (Serviço Simulado da Universidade Licungo)"
               >
                 <Mail className="w-5 h-5" />
                 {simulatedEmailsCount > 0 && (

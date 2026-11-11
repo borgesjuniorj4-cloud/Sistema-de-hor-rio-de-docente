@@ -1113,7 +1113,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-slate-300 mt-1 max-w-3xl">
-                    Em conformidade com as regras institucionais da Universidade Tobas, a adição, nomeação e destituição dos 
+                    Em conformidade com as regras institucionais da Universidade Licungo, a adição, nomeação e destituição dos 
                     <strong> Diretores de Departamento</strong> e <strong>Coordenadores de Curso</strong> é efetuada exclusivamente 
                     pela conta de Administrador. A nomeação atribui as permissões estatutárias de gestão académica e credenciais institucionais.
                   </p>
@@ -1698,7 +1698,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-xs">
             <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4">
-              Parâmetros Globais do Sistema • Universidade Tobas (SGHD)
+              Parâmetros Globais do Sistema • Universidade Licungo (SGHD)
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
@@ -2319,7 +2319,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <div className="mt-5 flex flex-col sm:flex-row items-center gap-2">
               <button
                 onClick={() => {
-                  const text = `Credenciais SGHD Universidade Tobas\nCargo: ${newCredentialsModal.roleTitle}\nDocente: ${newCredentialsModal.teacherName}\nLogin: ${newCredentialsModal.email}\nSenha: ${newCredentialsModal.password}`;
+                  const text = `Credenciais SGHD Universidade Licungo\nCargo: ${newCredentialsModal.roleTitle}\nDocente: ${newCredentialsModal.teacherName}\nLogin: ${newCredentialsModal.email}\nSenha: ${newCredentialsModal.password}`;
                   navigator.clipboard.writeText(text);
                   setCopiedAppointeeCredentials(true);
                   setTimeout(() => setCopiedAppointeeCredentials(false), 2500);
@@ -2635,7 +2635,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const text = `Credenciais SGHD Universidade Tobas\nNome: ${createdUserModal.user.name}\nPapel: ${createdUserModal.user.role}\nLogin: ${createdUserModal.user.email}\nPalavra-passe: ${createdUserModal.password}`;
+                  const text = `Credenciais SGHD Universidade Licungo\nNome: ${createdUserModal.user.name}\nPapel: ${createdUserModal.user.role}\nLogin: ${createdUserModal.user.email}\nPalavra-passe: ${createdUserModal.password}`;
                   navigator.clipboard.writeText(text);
                   setCopiedUserId('all-new-user');
                   setTimeout(() => setCopiedUserId(null), 2000);

@@ -130,9 +130,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const isAcademicManager = ['gestor', 'admin', 'coordenador', 'diretor'].includes(role);
   const effectiveTeacherId = currentTeacherId || currentUser?.teacherId;
 
-  // Specific Teacher Dashboard logic (PDF page 37)
+  // Specific Teacher Dashboard logic (Strict Confidentiality - only own data)
   const isTeacherView = role === 'docente';
-  const currentTeacher = isTeacherView ? (safeTeachers.find(t => t.id === effectiveTeacherId || (currentUser?.id && t.userId === currentUser.id)) || safeTeachers[0] || null) : null;
+  const currentTeacher = isTeacherView ? (safeTeachers.find(t => 
+    (effectiveTeacherId && t.id === effectiveTeacherId) || 
+    (currentUser?.id && t.userId === currentUser.id) ||
+    (currentUser?.email && t.email && t.email.toLowerCase() === currentUser.email.toLowerCase())
+  ) || null) : null;
   const teacherSchedules = currentTeacher ? safeSchedules.filter(s => s.teacherId === currentTeacher.id && s.status !== 'Cancelado') : [];
   const teacherPendingRequests = currentTeacher ? safeChangeRequests.filter(r => r.teacherId === currentTeacher.id && r.status === 'Pendente') : [];
 
@@ -190,8 +194,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </h1>
           <p className="text-sm text-slate-600 mt-0.5">
             {isTeacherView 
-              ? 'Consulte as suas aulas de hoje, disciplinas atribuídas e solicitações de ajuste de horário na Universidade Tobas.'
-              : 'Bem-vindo ao Sistema de Gestão de Horários de Docentes da Universidade Tobas.'}
+              ? 'Consulte as suas aulas de hoje, disciplinas atribuídas e solicitações de ajuste de horário na Universidade Licungo.'
+              : 'Bem-vindo ao Sistema de Gestão de Horários de Docentes da Universidade Licungo.'}
           </p>
         </div>
 

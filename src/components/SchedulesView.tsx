@@ -134,8 +134,19 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
   const [selectedRoomId, setSelectedRoomId] = useState<string>(rooms[0]?.id || '');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedShift, setSelectedShift] = useState<'all' | 'morning' | 'afternoon'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [displayType, setDisplayType] = useState<'grid' | 'table'>('grid');
+
+  const visibleTimeSlots = useMemo(() => {
+    if (selectedShift === 'morning') {
+      return TIME_SLOTS.filter(s => s.split('-')[0] < '12:00');
+    }
+    if (selectedShift === 'afternoon') {
+      return TIME_SLOTS.filter(s => s.split('-')[0] >= '12:00');
+    }
+    return TIME_SLOTS;
+  }, [selectedShift]);
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -600,6 +611,20 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
             </select>
           </div>
 
+          {/* Turno Lectivo */}
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Turno Lectivo:</label>
+            <select
+              value={selectedShift}
+              onChange={e => setSelectedShift(e.target.value as any)}
+              className="w-full text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 min-h-[42px]"
+            >
+              <option value="all">Todos os Turnos (07:00 - 17:50)</option>
+              <option value="morning">🌅 Turno da Manhã (07:00 - 11:50)</option>
+              <option value="afternoon">🌇 Turno da Tarde (12:00 - 17:50)</option>
+            </select>
+          </div>
+
           {/* Search bar */}
           <div className="sm:col-span-2">
             <label className="block text-[11px] font-semibold text-slate-600 mb-1">Pesquisar:</label>
@@ -701,25 +726,88 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {TIME_SLOTS.map(slot => {
+                {visibleTimeSlots.map(slot => {
                   const [slotStart, slotEnd] = slot.split('-');
+                  const isFirstMorning = slot === '07:00-07:50';
+                  const isMorningBreak = slot === '09:45-10:35';
+                  const isFirstAfternoon = slot === '12:00-12:50';
+                  const isAfternoonBreak = slot === '14:45-15:35';
 
                   return (
-                    <tr key={slot} className="hover:bg-slate-50/30 transition-colors">
-                      {/* Slot Header */}
-                      <td className="py-3 px-3 text-xs font-mono font-bold text-slate-700 bg-slate-50/50 border-r border-slate-200 align-top">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{slot}</span>
-                        </div>
-                      </td>
+                    <React.Fragment key={slot}>
+                      {/* Turno da Manhã Header */}
+                      {isFirstMorning && (
+                        <tr className="bg-amber-50/90 border-y border-amber-200">
+                          <td colSpan={DAYS_OF_WEEK.length + 1} className="py-2.5 px-4 text-xs font-bold text-amber-950">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                              <span className="flex items-center gap-1.5 font-bold">
+                                <span>🌅</span>
+                                <span>TURNO DA MANHÃ (07:00 às 11:50) • Tempos Lectivos de 50 minutos</span>
+                              </span>
+                              <span className="text-[11px] font-normal text-amber-800">
+                                Intervalo de 15 min após o 3.º tempo (09:30 às 09:45)
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
 
-                      {/* Day cells */}
-                      {DAYS_OF_WEEK.map(day => {
-                        // Find lessons in this day & slot
-                        const cellLessons = filteredSchedules.filter(
-                          s => s.dayOfWeek === day && s.startTime === slotStart
-                        );
+                      {/* Intervalo da Manhã Row */}
+                      {isMorningBreak && (
+                        <tr className="bg-amber-100/70 border-y-2 border-amber-300">
+                          <td colSpan={DAYS_OF_WEEK.length + 1} className="py-2 px-4 text-xs font-bold text-amber-900 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <span>☕</span>
+                              <span>INTERVALO OFICIAL DA MANHÃ (15 MINUTOS) • 09:30 ÀS 09:45 (Após o 3.º Tempo)</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* Turno da Tarde Header */}
+                      {isFirstAfternoon && (
+                        <tr className="bg-indigo-50/90 border-y border-indigo-200">
+                          <td colSpan={DAYS_OF_WEEK.length + 1} className="py-2.5 px-4 text-xs font-bold text-indigo-950">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                              <span className="flex items-center gap-1.5 font-bold">
+                                <span>🌇</span>
+                                <span>TURNO DA TARDE (12:00 às 17:50) • Tempos Lectivos de 50 minutos</span>
+                              </span>
+                              <span className="text-[11px] font-normal text-indigo-800">
+                                Intervalo de 15 min após o 3.º tempo (14:30 às 14:45)
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* Intervalo da Tarde Row */}
+                      {isAfternoonBreak && (
+                        <tr className="bg-indigo-100/70 border-y-2 border-indigo-300">
+                          <td colSpan={DAYS_OF_WEEK.length + 1} className="py-2 px-4 text-xs font-bold text-indigo-900 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <span>☕</span>
+                              <span>INTERVALO OFICIAL DA TARDE (15 MINUTOS) • 14:30 ÀS 14:45 (Após o 3.º Tempo)</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      <tr className="hover:bg-slate-50/30 transition-colors">
+                        {/* Slot Header */}
+                        <td className="py-3 px-3 text-xs font-mono font-bold text-slate-700 bg-slate-50/50 border-r border-slate-200 align-top">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{slot}</span>
+                          </div>
+                        </td>
+
+                        {/* Day cells */}
+                        {DAYS_OF_WEEK.map(day => {
+                          // Find lessons in this day & slot
+                          const cellLessons = filteredSchedules.filter(
+                            s => s.dayOfWeek === day && (s.startTime === slotStart || (s.startTime <= slotStart && s.endTime > slotStart))
+                          );
 
                         return (
                           <td 
@@ -858,8 +946,9 @@ export const SchedulesView: React.FC<SchedulesViewProps> = ({
                         );
                       })}
                     </tr>
-                  );
-                })}
+                  </React.Fragment>
+                );
+              })}
               </tbody>
             </table>
           </div>

@@ -476,7 +476,7 @@ export const TeacherSchedulePdfModal: React.FC<TeacherSchedulePdfModalProps> = (
         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <FileCheck className="w-4 h-4 text-emerald-500" />
-            <span>Documento formatado segundo os padrões institucionais da Universidade Tobas</span>
+            <span>Documento formatado segundo os padrões institucionais da Universidade Licungo</span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">

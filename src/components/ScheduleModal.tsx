@@ -50,8 +50,8 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
   const [classId, setClassId] = useState('');
   const [roomId, setRoomId] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>('Segunda');
-  const [startTime, setStartTime] = useState('08:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const [startTime, setStartTime] = useState('07:00');
+  const [endTime, setEndTime] = useState('07:50');
   const [lessonType, setLessonType] = useState<LessonType>('Teórica');
   const [status, setStatus] = useState<ScheduleStatus>('Rascunho');
   const [notes, setNotes] = useState('');
@@ -83,12 +83,12 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
       if (preselectedSlot) {
         setDayOfWeek(preselectedSlot.day);
         const [st, et] = preselectedSlot.time.split('-');
-        setStartTime(st || '08:00');
-        setEndTime(et || '10:00');
+        setStartTime(st || '07:00');
+        setEndTime(et || '07:50');
       } else {
         setDayOfWeek('Segunda');
-        setStartTime('08:00');
-        setEndTime('10:00');
+        setStartTime('07:00');
+        setEndTime('07:50');
       }
       setLessonType('Teórica');
       setStatus('Rascunho');
@@ -350,12 +350,23 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
                 onChange={e => setStartTime(e.target.value)}
                 className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-mono"
               >
-                <option value="08:00">08:00</option>
-                <option value="10:00">10:00</option>
-                <option value="14:00">14:00</option>
-                <option value="16:00">16:00</option>
-                <option value="18:00">18:00</option>
-                <option value="20:00">20:00</option>
+                <optgroup label="Turno da Manhã (07:00 - 11:50)">
+                  <option value="07:00">07:00 (1.º Tempo)</option>
+                  <option value="07:50">07:50 (2.º Tempo)</option>
+                  <option value="08:40">08:40 (3.º Tempo)</option>
+                  <option value="09:45">09:45 (4.º Tempo • Pós-Intervalo)</option>
+                  <option value="10:35">10:35 (5.º Tempo)</option>
+                  <option value="11:00">11:00 (6.º Tempo)</option>
+                </optgroup>
+                <optgroup label="Turno da Tarde (12:00 - 17:50)">
+                  <option value="12:00">12:00 (1.º Tempo Tarde)</option>
+                  <option value="12:50">12:50 (2.º Tempo Tarde)</option>
+                  <option value="13:40">13:40 (3.º Tempo Tarde)</option>
+                  <option value="14:45">14:45 (4.º Tempo Tarde • Pós-Intervalo)</option>
+                  <option value="15:35">15:35 (5.º Tempo Tarde)</option>
+                  <option value="16:25">16:25 (6.º Tempo Tarde)</option>
+                  <option value="17:00">17:00 (7.º Tempo Tarde)</option>
+                </optgroup>
               </select>
             </div>
 
@@ -369,15 +380,148 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
                 onChange={e => setEndTime(e.target.value)}
                 className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 font-mono"
               >
-                <option value="10:00">10:00</option>
-                <option value="12:00">12:00</option>
-                <option value="16:00">16:00</option>
-                <option value="18:00">18:00</option>
-                <option value="20:00">20:00</option>
-                <option value="22:00">22:00</option>
+                <optgroup label="Términos Manhã">
+                  <option value="07:50">07:50 (1 Tempo • 50 min)</option>
+                  <option value="08:40">08:40 (2 Tempos • 100 min)</option>
+                  <option value="09:30">09:30 (3.º Tempo • Início Recreio)</option>
+                  <option value="10:35">10:35 (4.º Tempo • 50 min)</option>
+                  <option value="11:25">11:25 (5.º Tempo • 50 min)</option>
+                  <option value="11:50">11:50 (Término Turno Manhã)</option>
+                </optgroup>
+                <optgroup label="Términos Tarde">
+                  <option value="12:50">12:50 (1 Tempo Tarde • 50 min)</option>
+                  <option value="13:40">13:40 (2 Tempos Tarde • 100 min)</option>
+                  <option value="14:30">14:30 (3.º Tempo • Início Recreio)</option>
+                  <option value="15:35">15:35 (4.º Tempo Tarde • 50 min)</option>
+                  <option value="16:25">16:25 (5.º Tempo Tarde • 50 min)</option>
+                  <option value="17:15">17:15 (6.º Tempo Tarde • 50 min)</option>
+                  <option value="17:50">17:50 (Término Turno Tarde)</option>
+                </optgroup>
               </select>
             </div>
 
+          </div>
+
+          {/* Quick Tempos Selector */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-semibold text-slate-700">Selecção Rápida de Tempos (50 min / Blocos):</span>
+              <span className="text-[11px] text-slate-500">Intervalos: 09:30-09:45 e 14:30-14:45</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase self-center mr-1">Manhã:</span>
+              <button
+                type="button"
+                onClick={() => { setStartTime('07:00'); setEndTime('07:50'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '07:00' && endTime === '07:50' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                1.º (07:00-07:50)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('07:50'); setEndTime('08:40'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '07:50' && endTime === '08:40' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                2.º (07:50-08:40)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('08:40'); setEndTime('09:30'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '08:40' && endTime === '09:30' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                3.º (08:40-09:30)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('09:45'); setEndTime('10:35'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '09:45' && endTime === '10:35' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                4.º (09:45-10:35)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('10:35'); setEndTime('11:25'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '10:35' && endTime === '11:25' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                5.º (10:35-11:25)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('11:00'); setEndTime('11:50'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '11:00' && endTime === '11:50' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                6.º (11:00-11:50)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('07:00'); setEndTime('08:40'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '07:00' && endTime === '08:40' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+                title="Bloco duplo geminado de 2 tempos de 50 min"
+              >
+                Bloco 2T (07:00-08:40)
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-slate-200">
+              <span className="text-[10px] font-bold text-slate-500 uppercase self-center mr-1">Tarde:</span>
+              <button
+                type="button"
+                onClick={() => { setStartTime('12:00'); setEndTime('12:50'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '12:00' && endTime === '12:50' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                1.º (12:00-12:50)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('12:50'); setEndTime('13:40'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '12:50' && endTime === '13:40' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                2.º (12:50-13:40)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('13:40'); setEndTime('14:30'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '13:40' && endTime === '14:30' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                3.º (13:40-14:30)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('14:45'); setEndTime('15:35'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '14:45' && endTime === '15:35' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                4.º (14:45-15:35)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('15:35'); setEndTime('16:25'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '15:35' && endTime === '16:25' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                5.º (15:35-16:25)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('16:25'); setEndTime('17:15'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '16:25' && endTime === '17:15' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                6.º (16:25-17:15)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('17:00'); setEndTime('17:50'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '17:00' && endTime === '17:50' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+              >
+                7.º (17:00-17:50)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTime('12:00'); setEndTime('13:40'); }}
+                className={`px-2 py-1 rounded text-[11px] border cursor-pointer ${startTime === '12:00' && endTime === '13:40' ? 'bg-indigo-600 text-white border-indigo-600 font-bold' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`}
+                title="Bloco duplo geminado de 2 tempos de 50 min"
+              >
+                Bloco 2T (12:00-13:40)
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

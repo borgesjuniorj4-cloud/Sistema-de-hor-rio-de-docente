@@ -88,10 +88,10 @@ export const LockScreen: React.FC<LockScreenProps> = ({
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-auto">
         <div className="flex items-center gap-2.5 text-white">
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-xs shadow-md">
-            UT
+            UL
           </div>
           <div>
-            <div className="text-sm font-bold tracking-tight">Universidade Tobas</div>
+            <div className="text-sm font-bold tracking-tight">Universidade Licungo</div>
             <div className="text-[10px] text-slate-400">SGHD • Sistema de Gestão de Horários</div>
           </div>
         </div>

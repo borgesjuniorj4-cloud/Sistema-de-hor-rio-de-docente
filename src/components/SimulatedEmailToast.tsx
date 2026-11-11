@@ -94,7 +94,7 @@ export const SimulatedEmailToast: React.FC<SimulatedEmailToastProps> = ({ onOpen
                 <span>Visualizar E-mail</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <span className="text-[11px] text-slate-400">Universidade Tobas • SGHD</span>
+              <span className="text-[11px] text-slate-400">Universidade Licungo • SGHD</span>
             </div>
           </div>
         </div>

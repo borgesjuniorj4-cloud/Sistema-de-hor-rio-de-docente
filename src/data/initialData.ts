@@ -801,31 +801,98 @@ export const INITIAL_ACADEMIC_PERIODS: AcademicPeriod[] = [
     id: 'period-2026-1',
     academicYear: '2026',
     semester: '1.º Semestre',
-    startDate: '2026-09-01',
-    endDate: '2027-01-31',
+    startDate: '2026-03-02',
+    endDate: '2026-08-07',
     isCurrent: true,
     status: 'Ativo',
+    weeksCount: 16,
+    description: '1.º Semestre Lectivo (02 de Março a 07 de Agosto de 2026 • Validade: 16 Semanas)',
   },
   {
     id: 'period-2026-2',
     academicYear: '2026',
     semester: '2.º Semestre',
-    startDate: '2027-02-15',
-    endDate: '2027-06-30',
+    startDate: '2026-09-08',
+    endDate: '2026-12-18',
     isCurrent: false,
     status: 'Planeamento',
+    weeksCount: 15,
+    description: '2.º Semestre Lectivo (08 de Setembro a 18 de Dezembro de 2026 • Validade: 15 Semanas)',
   },
 ];
 
 export const INITIAL_PERIODS = INITIAL_ACADEMIC_PERIODS;
 
+/**
+ * Matriz Oficial de Tempos Lectivos:
+ * - Duração por aula: 50 minutos
+ * - Turno da Manhã: 07:00 às 11:50 com Intervalo de 15 min após o 3.º tempo (09:30 às 09:45)
+ * - Turno da Tarde: 12:00 às 17:50 com Intervalo de 15 min após o 3.º tempo (14:30 às 14:45)
+ */
 export const TIME_SLOTS = [
-  '08:00-10:00',
-  '10:00-12:00',
-  '14:00-16:00',
-  '16:00-18:00',
-  '18:00-20:00',
+  // Turno da Manhã (07:00 - 11:50)
+  '07:00-07:50', // 1.º Tempo (Manhã)
+  '07:50-08:40', // 2.º Tempo (Manhã)
+  '08:40-09:30', // 3.º Tempo (Manhã)
+  // Intervalo da Manhã: 09:30 - 09:45 (15 min)
+  '09:45-10:35', // 4.º Tempo (Manhã)
+  '10:35-11:25', // 5.º Tempo (Manhã)
+  '11:00-11:50', // 6.º Tempo (Manhã / Encerramento do Turno)
+
+  // Turno da Tarde (12:00 - 17:50)
+  '12:00-12:50', // 1.º Tempo (Tarde)
+  '12:50-13:40', // 2.º Tempo (Tarde)
+  '13:40-14:30', // 3.º Tempo (Tarde)
+  // Intervalo da Tarde: 14:30 - 14:45 (15 min)
+  '14:45-15:35', // 4.º Tempo (Tarde)
+  '15:35-16:25', // 5.º Tempo (Tarde)
+  '16:25-17:15', // 6.º Tempo (Tarde)
+  '17:00-17:50', // 7.º Tempo (Tarde / Encerramento do Turno)
 ];
+
+export interface SlotDetail {
+  slot: string;
+  shift: 'Manhã' | 'Tarde';
+  tempo: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  afterBreak?: boolean;
+}
+
+export const TIME_SLOTS_DETAILS: SlotDetail[] = [
+  { slot: '07:00-07:50', shift: 'Manhã', tempo: '1.º Tempo', label: '1.º Tempo (07:00 - 07:50)', startTime: '07:00', endTime: '07:50', durationMinutes: 50 },
+  { slot: '07:50-08:40', shift: 'Manhã', tempo: '2.º Tempo', label: '2.º Tempo (07:50 - 08:40)', startTime: '07:50', endTime: '08:40', durationMinutes: 50 },
+  { slot: '08:40-09:30', shift: 'Manhã', tempo: '3.º Tempo', label: '3.º Tempo (08:40 - 09:30)', startTime: '08:40', endTime: '09:30', durationMinutes: 50 },
+  { slot: '09:45-10:35', shift: 'Manhã', tempo: '4.º Tempo', label: '4.º Tempo (09:45 - 10:35)', startTime: '09:45', endTime: '10:35', durationMinutes: 50, afterBreak: true },
+  { slot: '10:35-11:25', shift: 'Manhã', tempo: '5.º Tempo', label: '5.º Tempo (10:35 - 11:25)', startTime: '10:35', endTime: '11:25', durationMinutes: 50 },
+  { slot: '11:00-11:50', shift: 'Manhã', tempo: '6.º Tempo', label: '6.º Tempo (11:00 - 11:50)', startTime: '11:00', endTime: '11:50', durationMinutes: 50 },
+
+  { slot: '12:00-12:50', shift: 'Tarde', tempo: '1.º Tempo', label: '1.º Tempo (12:00 - 12:50)', startTime: '12:00', endTime: '12:50', durationMinutes: 50 },
+  { slot: '12:50-13:40', shift: 'Tarde', tempo: '2.º Tempo', label: '2.º Tempo (12:50 - 13:40)', startTime: '12:50', endTime: '13:40', durationMinutes: 50 },
+  { slot: '13:40-14:30', shift: 'Tarde', tempo: '3.º Tempo', label: '3.º Tempo (13:40 - 14:30)', startTime: '13:40', endTime: '14:30', durationMinutes: 50 },
+  { slot: '14:45-15:35', shift: 'Tarde', tempo: '4.º Tempo', label: '4.º Tempo (14:45 - 15:35)', startTime: '14:45', endTime: '15:35', durationMinutes: 50, afterBreak: true },
+  { slot: '15:35-16:25', shift: 'Tarde', tempo: '5.º Tempo', label: '5.º Tempo (15:35 - 16:25)', startTime: '15:35', endTime: '16:25', durationMinutes: 50 },
+  { slot: '16:25-17:15', shift: 'Tarde', tempo: '6.º Tempo', label: '6.º Tempo (16:25 - 17:15)', startTime: '16:25', endTime: '17:15', durationMinutes: 50 },
+  { slot: '17:00-17:50', shift: 'Tarde', tempo: '7.º Tempo', label: '7.º Tempo (17:00 - 17:50)', startTime: '17:00', endTime: '17:50', durationMinutes: 50 },
+];
+
+export const MORNING_BREAK_INFO = {
+  shift: 'Manhã',
+  label: 'Intervalo da Manhã (15 min)',
+  startTime: '09:30',
+  endTime: '09:45',
+  afterTempo: 3,
+};
+
+export const AFTERNOON_BREAK_INFO = {
+  shift: 'Tarde',
+  label: 'Intervalo da Tarde (15 min)',
+  startTime: '14:30',
+  endTime: '14:45',
+  afterTempo: 3,
+};
 
 export const DAYS_OF_WEEK: ('Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta')[] = [
   'Segunda',
@@ -835,51 +902,41 @@ export const DAYS_OF_WEEK: ('Segunda' | 'Terça' | 'Quarta' | 'Quinta' | 'Sexta'
   'Sexta',
 ];
 
-// Seed Availabilities (Matching PDF page 13 example)
+// Seed Availabilities (Matching 50-minute slots)
 export const INITIAL_AVAILABILITIES: TeacherAvailability[] = [
   // João Manuel (doc-1)
-  { id: 'av-1', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '08:00-10:00', status: 'Disponível' },
-  { id: 'av-2', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '10:00-12:00', status: 'Disponível' },
-  { id: 'av-3', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '14:00-16:00', status: 'Indisponível' },
-  { id: 'av-4', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '16:00-18:00', status: 'Disponível' },
-  { id: 'av-5', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '08:00-10:00', status: 'Disponível' },
-  { id: 'av-6', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '10:00-12:00', status: 'Indisponível' },
-  { id: 'av-7', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-8', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '16:00-18:00', status: 'Disponível' },
-  { id: 'av-9', teacherId: 'doc-1', dayOfWeek: 'Quarta', timeSlot: '08:00-10:00', status: 'Disponível' },
-  { id: 'av-10', teacherId: 'doc-1', dayOfWeek: 'Quarta', timeSlot: '10:00-12:00', status: 'Disponível' },
-  { id: 'av-11', teacherId: 'doc-1', dayOfWeek: 'Quarta', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-12', teacherId: 'doc-1', dayOfWeek: 'Quarta', timeSlot: '16:00-18:00', status: 'Indisponível' },
-  { id: 'av-13', teacherId: 'doc-1', dayOfWeek: 'Quinta', timeSlot: '08:00-10:00', status: 'Disponível' },
-  { id: 'av-14', teacherId: 'doc-1', dayOfWeek: 'Quinta', timeSlot: '10:00-12:00', status: 'Disponível' },
-  { id: 'av-15', teacherId: 'doc-1', dayOfWeek: 'Quinta', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-16', teacherId: 'doc-1', dayOfWeek: 'Quinta', timeSlot: '16:00-18:00', status: 'Disponível' },
-  { id: 'av-17', teacherId: 'doc-1', dayOfWeek: 'Sexta', timeSlot: '08:00-10:00', status: 'Disponível' },
-  { id: 'av-18', teacherId: 'doc-1', dayOfWeek: 'Sexta', timeSlot: '10:00-12:00', status: 'Disponível' },
-  { id: 'av-19', teacherId: 'doc-1', dayOfWeek: 'Sexta', timeSlot: '14:00-16:00', status: 'Indisponível' },
-  { id: 'av-20', teacherId: 'doc-1', dayOfWeek: 'Sexta', timeSlot: '16:00-18:00', status: 'Indisponível' },
+  { id: 'av-1', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '07:00-07:50', status: 'Disponível' },
+  { id: 'av-2', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '07:50-08:40', status: 'Disponível' },
+  { id: 'av-3', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '08:40-09:30', status: 'Disponível' },
+  { id: 'av-4', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '09:45-10:35', status: 'Disponível' },
+  { id: 'av-5', teacherId: 'doc-1', dayOfWeek: 'Segunda', timeSlot: '12:00-12:50', status: 'Indisponível' },
+  { id: 'av-6', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '07:00-07:50', status: 'Disponível' },
+  { id: 'av-7', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '07:50-08:40', status: 'Disponível' },
+  { id: 'av-8', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '08:40-09:30', status: 'Indisponível' },
+  { id: 'av-9', teacherId: 'doc-1', dayOfWeek: 'Terça', timeSlot: '12:00-12:50', status: 'Disponível' },
+  { id: 'av-10', teacherId: 'doc-1', dayOfWeek: 'Quarta', timeSlot: '07:00-07:50', status: 'Disponível' },
+  { id: 'av-11', teacherId: 'doc-1', dayOfWeek: 'Quarta', timeSlot: '07:50-08:40', status: 'Disponível' },
+  { id: 'av-12', teacherId: 'doc-1', dayOfWeek: 'Quinta', timeSlot: '07:00-07:50', status: 'Disponível' },
+  { id: 'av-13', teacherId: 'doc-1', dayOfWeek: 'Quinta', timeSlot: '07:50-08:40', status: 'Disponível' },
+  { id: 'av-14', teacherId: 'doc-1', dayOfWeek: 'Sexta', timeSlot: '07:00-07:50', status: 'Disponível' },
+  { id: 'av-15', teacherId: 'doc-1', dayOfWeek: 'Sexta', timeSlot: '07:50-08:40', status: 'Disponível' },
 
   // Maria Silva (doc-2)
-  { id: 'av-21', teacherId: 'doc-2', dayOfWeek: 'Segunda', timeSlot: '08:00-10:00', status: 'Indisponível' },
-  { id: 'av-22', teacherId: 'doc-2', dayOfWeek: 'Segunda', timeSlot: '10:00-12:00', status: 'Disponível' },
-  { id: 'av-23', teacherId: 'doc-2', dayOfWeek: 'Segunda', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-24', teacherId: 'doc-2', dayOfWeek: 'Terça', timeSlot: '08:00-10:00', status: 'Disponível' },
-  { id: 'av-25', teacherId: 'doc-2', dayOfWeek: 'Terça', timeSlot: '10:00-12:00', status: 'Disponível' },
-  { id: 'av-26', teacherId: 'doc-2', dayOfWeek: 'Quarta', timeSlot: '08:00-10:00', status: 'Disponível' },
-  { id: 'av-27', teacherId: 'doc-2', dayOfWeek: 'Quarta', timeSlot: '10:00-12:00', status: 'Disponível' },
-  { id: 'av-28', teacherId: 'doc-2', dayOfWeek: 'Quinta', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-29', teacherId: 'doc-2', dayOfWeek: 'Sexta', timeSlot: '08:00-10:00', status: 'Disponível' },
-
+  { id: 'av-16', teacherId: 'doc-2', dayOfWeek: 'Segunda', timeSlot: '09:45-10:35', status: 'Disponível' },
+  { id: 'av-17', teacherId: 'doc-2', dayOfWeek: 'Segunda', timeSlot: '10:35-11:25', status: 'Disponível' },
+  { id: 'av-18', teacherId: 'doc-2', dayOfWeek: 'Quarta', timeSlot: '07:00-07:50', status: 'Disponível' },
+  { id: 'av-19', teacherId: 'doc-2', dayOfWeek: 'Quarta', timeSlot: '07:50-08:40', status: 'Disponível' },
+  { id: 'av-20', teacherId: 'doc-2', dayOfWeek: 'Quinta', timeSlot: '12:00-12:50', status: 'Disponível' },
+  { id: 'av-21', teacherId: 'doc-2', dayOfWeek: 'Quinta', timeSlot: '12:50-13:40', status: 'Disponível' },
   // Pedro José (doc-3)
-  { id: 'av-30', teacherId: 'doc-3', dayOfWeek: 'Segunda', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-31', teacherId: 'doc-3', dayOfWeek: 'Terça', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-32', teacherId: 'doc-3', dayOfWeek: 'Quarta', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-33', teacherId: 'doc-3', dayOfWeek: 'Quinta', timeSlot: '14:00-16:00', status: 'Disponível' },
-  { id: 'av-34', teacherId: 'doc-3', dayOfWeek: 'Sexta', timeSlot: '10:00-12:00', status: 'Disponível' },
+  { id: 'av-22', teacherId: 'doc-3', dayOfWeek: 'Segunda', timeSlot: '12:00-12:50', status: 'Disponível' },
+  { id: 'av-23', teacherId: 'doc-3', dayOfWeek: 'Terça', timeSlot: '14:45-15:35', status: 'Disponível' },
+  { id: 'av-24', teacherId: 'doc-3', dayOfWeek: 'Quinta', timeSlot: '12:00-12:50', status: 'Disponível' },
+  { id: 'av-25', teacherId: 'doc-3', dayOfWeek: 'Sexta', timeSlot: '07:00-07:50', status: 'Disponível' },
 ];
 
 export const INITIAL_SCHEDULES: ScheduleItem[] = [
-  // Monday
+  // Segunda-feira
   {
     id: 'sch-1',
     academicPeriodId: 'period-2026-1',
@@ -888,13 +945,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-1', // INF-A
     roomId: 'room-lab1', // Lab 1
     dayOfWeek: 'Segunda',
-    startTime: '08:00',
-    endTime: '10:00',
+    startTime: '07:00',
+    endTime: '07:50',
     lessonType: 'Prática',
     status: 'Publicado',
-    notes: 'Introdução aos algoritmos práticos.',
-    createdAt: '2026-08-15T09:00:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Introdução aos algoritmos práticos (1.º Tempo Manhã - 50 min).',
+    createdAt: '2026-03-02T09:00:00Z',
+    updatedAt: '2026-03-02T11:00:00Z',
   },
   {
     id: 'sch-2',
@@ -904,13 +961,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-1', // INF-A
     roomId: 'room-sala4', // Sala 4
     dayOfWeek: 'Segunda',
-    startTime: '10:00',
-    endTime: '12:00',
+    startTime: '09:45',
+    endTime: '10:35',
     lessonType: 'Teórica',
     status: 'Publicado',
-    notes: 'Cálculo de limites fundamentais.',
-    createdAt: '2026-08-15T09:30:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Cálculo diferencial e limites (4.º Tempo Manhã • Pós-Intervalo).',
+    createdAt: '2026-03-02T09:30:00Z',
+    updatedAt: '2026-03-02T11:00:00Z',
   },
   {
     id: 'sch-3',
@@ -920,16 +977,16 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-2', // INF-B
     roomId: 'room-lab2', // Lab 2
     dayOfWeek: 'Segunda',
-    startTime: '14:00',
-    endTime: '16:00',
+    startTime: '12:00',
+    endTime: '12:50',
     lessonType: 'Laboratório',
     status: 'Publicado',
-    notes: 'Laboratório prático de SQL.',
-    createdAt: '2026-08-16T10:00:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Laboratório prático de SQL (1.º Tempo Tarde - 50 min).',
+    createdAt: '2026-03-02T10:00:00Z',
+    updatedAt: '2026-03-02T11:00:00Z',
   },
 
-  // Tuesday
+  // Terça-feira
   {
     id: 'sch-4',
     academicPeriodId: 'period-2026-1',
@@ -938,13 +995,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-3', // INF-C
     roomId: 'room-lab1', // Lab 1
     dayOfWeek: 'Terça',
-    startTime: '10:00',
-    endTime: '12:00',
+    startTime: '08:40',
+    endTime: '09:30',
     lessonType: 'Prática',
     status: 'Publicado',
-    notes: 'Paradigma orientado a objetos.',
-    createdAt: '2026-08-16T11:00:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Paradigma orientado a objetos (3.º Tempo Manhã).',
+    createdAt: '2026-03-03T11:00:00Z',
+    updatedAt: '2026-03-03T11:00:00Z',
   },
   {
     id: 'sch-5',
@@ -954,16 +1011,16 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-2', // INF-B
     roomId: 'room-lab2', // Lab 2
     dayOfWeek: 'Terça',
-    startTime: '14:00',
-    endTime: '16:00',
+    startTime: '14:45',
+    endTime: '15:35',
     lessonType: 'Teórico-Prática',
     status: 'Publicado',
-    notes: 'Diagramas Entidade-Relacionamento.',
-    createdAt: '2026-08-17T09:00:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Diagramas Entidade-Relacionamento (4.º Tempo Tarde • Pós-Intervalo).',
+    createdAt: '2026-03-03T09:00:00Z',
+    updatedAt: '2026-03-03T11:00:00Z',
   },
 
-  // Wednesday
+  // Quarta-feira
   {
     id: 'sch-6',
     academicPeriodId: 'period-2026-1',
@@ -972,13 +1029,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-2', // INF-B
     roomId: 'room-sala4', // Sala 4
     dayOfWeek: 'Quarta',
-    startTime: '08:00',
-    endTime: '10:00',
+    startTime: '07:00',
+    endTime: '07:50',
     lessonType: 'Teórica',
     status: 'Publicado',
-    notes: 'Sucessões e convergência.',
-    createdAt: '2026-08-17T14:00:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Sucessões e convergência analítica (1.º Tempo Manhã).',
+    createdAt: '2026-03-04T14:00:00Z',
+    updatedAt: '2026-03-04T11:00:00Z',
   },
   {
     id: 'sch-7',
@@ -988,16 +1045,16 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-3', // INF-C
     roomId: 'room-lab1', // Lab 1
     dayOfWeek: 'Quarta',
-    startTime: '10:00',
-    endTime: '12:00',
+    startTime: '09:45',
+    endTime: '10:35',
     lessonType: 'Laboratório',
     status: 'Publicado',
-    notes: 'Análise de pacotes Wireshark.',
-    createdAt: '2026-08-17T15:00:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Análise de pacotes Wireshark (4.º Tempo Manhã • Pós-Intervalo).',
+    createdAt: '2026-03-04T15:00:00Z',
+    updatedAt: '2026-03-04T11:00:00Z',
   },
 
-  // Thursday
+  // Quinta-feira
   {
     id: 'sch-8',
     academicPeriodId: 'period-2026-1',
@@ -1006,13 +1063,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-1', // INF-A
     roomId: 'room-lab1', // Lab 1
     dayOfWeek: 'Quinta',
-    startTime: '08:00',
-    endTime: '10:00',
+    startTime: '07:50',
+    endTime: '08:40',
     lessonType: 'Teórica',
     status: 'Publicado',
-    notes: 'Funções e ponteiros.',
-    createdAt: '2026-08-18T09:00:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Funções e ponteiros em C/C++ (2.º Tempo Manhã).',
+    createdAt: '2026-03-05T09:00:00Z',
+    updatedAt: '2026-03-05T11:00:00Z',
   },
   {
     id: 'sch-9',
@@ -1022,16 +1079,16 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-1', // INF-A
     roomId: 'room-sala4', // Sala 4
     dayOfWeek: 'Quinta',
-    startTime: '14:00',
-    endTime: '16:00',
+    startTime: '12:50',
+    endTime: '13:40',
     lessonType: 'Teórico-Prática',
     status: 'Publicado',
-    notes: 'Determinantes de matrizes nxn.',
-    createdAt: '2026-08-18T10:30:00Z',
-    updatedAt: '2026-08-20T11:00:00Z',
+    notes: 'Determinantes de matrizes (2.º Tempo Tarde).',
+    createdAt: '2026-03-05T10:30:00Z',
+    updatedAt: '2026-03-05T11:00:00Z',
   },
 
-  // Friday (Draft in review)
+  // Sexta-feira
   {
     id: 'sch-10',
     academicPeriodId: 'period-2026-1',
@@ -1040,13 +1097,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-2', // INF-B
     roomId: 'room-lab2', // Lab 2
     dayOfWeek: 'Sexta',
-    startTime: '10:00',
-    endTime: '12:00',
+    startTime: '07:00',
+    endTime: '07:50',
     lessonType: 'Prática',
     status: 'Em validação',
-    notes: 'Sessão de reforço para projeto semestral.',
-    createdAt: '2026-08-19T14:00:00Z',
-    updatedAt: '2026-08-21T09:00:00Z',
+    notes: 'Sessão de reforço para projeto semestral (1.º Tempo Manhã).',
+    createdAt: '2026-03-06T14:00:00Z',
+    updatedAt: '2026-03-06T09:00:00Z',
   },
   {
     id: 'sch-11',
@@ -1056,13 +1113,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-3', // INF-C
     roomId: 'room-lab1', // Lab 1
     dayOfWeek: 'Sexta',
-    startTime: '14:00',
-    endTime: '16:00',
+    startTime: '13:40',
+    endTime: '14:30',
     lessonType: 'Teórica',
     status: 'Aprovado',
-    notes: 'Protocolos de transporte TCP e UDP.',
-    createdAt: '2026-08-19T16:00:00Z',
-    updatedAt: '2026-08-21T10:00:00Z',
+    notes: 'Protocolos de transporte TCP e UDP (3.º Tempo Tarde).',
+    createdAt: '2026-03-06T16:00:00Z',
+    updatedAt: '2026-03-06T10:00:00Z',
   },
   {
     id: 'sch-eco-1',
@@ -1072,13 +1129,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-eco1',
     roomId: 'room-101',
     dayOfWeek: 'Segunda',
-    startTime: '08:00',
-    endTime: '10:00',
+    startTime: '07:00',
+    endTime: '08:40',
     lessonType: 'Teórica',
     status: 'Publicado',
-    notes: 'Introdução à Microeconomia e Teoria do Consumidor.',
-    createdAt: '2026-08-19T10:00:00Z',
-    updatedAt: '2026-08-21T10:00:00Z',
+    notes: 'Introdução à Microeconomia (Bloco Geminado de 2 Tempos Manhã).',
+    createdAt: '2026-03-02T10:00:00Z',
+    updatedAt: '2026-03-02T10:00:00Z',
   },
   {
     id: 'sch-eng-1',
@@ -1088,13 +1145,13 @@ export const INITIAL_SCHEDULES: ScheduleItem[] = [
     classId: 'turma-eng1',
     roomId: 'room-lab1',
     dayOfWeek: 'Terça',
-    startTime: '08:00',
-    endTime: '10:00',
+    startTime: '09:45',
+    endTime: '10:35',
     lessonType: 'Laboratório',
     status: 'Publicado',
-    notes: 'Análise de circuitos elétricos em corrente contínua.',
-    createdAt: '2026-08-19T10:00:00Z',
-    updatedAt: '2026-08-21T10:00:00Z',
+    notes: 'Circuitos elétricos (4.º Tempo Manhã • Pós-Intervalo).',
+    createdAt: '2026-03-03T10:00:00Z',
+    updatedAt: '2026-03-03T10:00:00Z',
   },
 ];
 

@@ -129,21 +129,86 @@ export const StorageService = {
   },
 
   getPeriods(): AcademicPeriod[] {
-    return loadItem<AcademicPeriod[]>(STORAGE_KEYS.PERIODS, INITIAL_ACADEMIC_PERIODS);
+    const periods = loadItem<AcademicPeriod[]>(STORAGE_KEYS.PERIODS, INITIAL_ACADEMIC_PERIODS);
+    let hasChanges = false;
+    const updated = periods.map(p => {
+      // 1.º Semestre: 02 de Março a 07 de Agosto de 2026 (Validade de 16 semanas)
+      if ((p.semester.includes('1') || p.id === 'period-2026-1') && (p.startDate !== '2026-03-02' || p.endDate !== '2026-08-07' || p.weeksCount !== 16)) {
+        hasChanges = true;
+        return {
+          ...p,
+          startDate: '2026-03-02',
+          endDate: '2026-08-07',
+          weeksCount: 16,
+          isCurrent: true,
+          status: 'Ativo' as const,
+          description: '1.º Semestre Lectivo (02 de Março a 07 de Agosto de 2026 • Validade: 16 Semanas)',
+        };
+      }
+      // 2.º Semestre: 08 de Setembro a 18 de Dezembro de 2026
+      if ((p.semester.includes('2') || p.id === 'period-2026-2') && (p.startDate !== '2026-09-08' || p.endDate !== '2026-12-18' || p.weeksCount !== 15)) {
+        hasChanges = true;
+        return {
+          ...p,
+          startDate: '2026-09-08',
+          endDate: '2026-12-18',
+          weeksCount: 15,
+          isCurrent: false,
+          status: 'Planeamento' as const,
+          description: '2.º Semestre Lectivo (08 de Setembro a 18 de Dezembro de 2026 • Validade: 15 Semanas)',
+        };
+      }
+      return p;
+    });
+
+    if (hasChanges) {
+      saveItem(STORAGE_KEYS.PERIODS, updated);
+      return updated;
+    }
+    return periods;
   },
   savePeriods(periods: AcademicPeriod[]) {
     saveItem(STORAGE_KEYS.PERIODS, periods);
   },
 
   getAvailabilities(): TeacherAvailability[] {
-    return loadItem<TeacherAvailability[]>(STORAGE_KEYS.AVAILABILITIES, INITIAL_AVAILABILITIES);
+    const avail = loadItem<TeacherAvailability[]>(STORAGE_KEYS.AVAILABILITIES, INITIAL_AVAILABILITIES);
+    // If old 2-hour slots are found, update to new 50-minute matrix
+    const hasOldSlots = avail.some(a => a.timeSlot === '08:00-10:00' || a.timeSlot === '10:00-12:00');
+    if (hasOldSlots) {
+      saveItem(STORAGE_KEYS.AVAILABILITIES, INITIAL_AVAILABILITIES);
+      return INITIAL_AVAILABILITIES;
+    }
+    return avail;
   },
   saveAvailabilities(avail: TeacherAvailability[]) {
     saveItem(STORAGE_KEYS.AVAILABILITIES, avail);
   },
 
   getSchedules(): ScheduleItem[] {
-    return loadItem<ScheduleItem[]>(STORAGE_KEYS.SCHEDULES, INITIAL_SCHEDULES);
+    const list = loadItem<ScheduleItem[]>(STORAGE_KEYS.SCHEDULES, INITIAL_SCHEDULES);
+    // Auto-migrate legacy 08:00-10:00 schedules to official 50-min times
+    const hasLegacyHours = list.some(s => s.startTime === '08:00' && s.endTime === '10:00');
+    if (hasLegacyHours) {
+      const migrated = list.map(s => {
+        if (s.startTime === '08:00' && s.endTime === '10:00') {
+          return { ...s, startTime: '07:00', endTime: '07:50' };
+        }
+        if (s.startTime === '10:00' && s.endTime === '12:00') {
+          return { ...s, startTime: '09:45', endTime: '10:35' };
+        }
+        if (s.startTime === '14:00' && s.endTime === '16:00') {
+          return { ...s, startTime: '12:00', endTime: '12:50' };
+        }
+        if (s.startTime === '16:00' && s.endTime === '18:00') {
+          return { ...s, startTime: '14:45', endTime: '15:35' };
+        }
+        return s;
+      });
+      saveItem(STORAGE_KEYS.SCHEDULES, migrated);
+      return migrated;
+    }
+    return list;
   },
   saveSchedules(schedules: ScheduleItem[]) {
     saveItem(STORAGE_KEYS.SCHEDULES, schedules);
@@ -297,7 +362,7 @@ export const StorageService = {
 
     const backupPayload = {
       metadata: {
-        appName: 'Universidade Tobas - SGHD (Sistema de Gestão de Horários de Docentes)',
+        appName: 'Universidade Licungo - SGHD (Sistema de Gestão de Horários de Docentes)',
         version: '2.0',
         exportedAt: new Date().toISOString(),
         exportedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Administrador',
@@ -330,7 +395,7 @@ export const StorageService = {
         const a = document.createElement('a');
         const nowStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
         a.href = url;
-        a.download = `universidade_tobas_sghd_backup_${nowStr}.json`;
+        a.download = `universidade_licungo_sghd_backup_${nowStr}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

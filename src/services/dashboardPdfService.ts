@@ -100,7 +100,7 @@ export function generateDashboardPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(255, 255, 255);
-  doc.text('UNIVERSIDADE TOBAS - CAMPUS CENTRAL', margin + 6, currentY + 7);
+  doc.text('UNIVERSIDADE LICUNGO - CAMPUS CENTRAL', margin + 6, currentY + 7);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -453,7 +453,7 @@ export function generateDashboardPdf(
     doc.setLineWidth(0.3);
     doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
 
-    doc.text('Universidade Tobas - SGHD • Sistema de Gestão de Horários de Docentes • Documento Oficial', margin, pageHeight - 6);
+    doc.text('Universidade Licungo - SGHD • Sistema de Gestão de Horários de Docentes • Documento Oficial', margin, pageHeight - 6);
     doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin - 20, pageHeight - 6);
   }
 
@@ -467,6 +467,6 @@ export function downloadDashboardPdf(
 ): void {
   const doc = generateDashboardPdf(data, options);
   const periodTag = options.period?.academicYear.replace(/[^a-zA-Z0-9]/g, '_') || '2026';
-  const defaultFilename = filename || `Universidade_Tobas_Relatorio_Dashboard_${periodTag}.pdf`;
+  const defaultFilename = filename || `Universidade_Licungo_Relatorio_Dashboard_${periodTag}.pdf`;
   doc.save(defaultFilename);
 }

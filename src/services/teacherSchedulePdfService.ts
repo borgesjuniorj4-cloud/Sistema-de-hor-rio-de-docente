@@ -92,7 +92,7 @@ export function generateTeacherSchedulePdf(options: TeacherSchedulePdfOptions): 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(255, 255, 255);
-  doc.text('UNIVERSIDADE TOBAS • DIREÇÃO PEDAGÓGICA E GESTÃO ACADÉMICA', margin + 6, currentY + 6.5);
+  doc.text('UNIVERSIDADE LICUNGO • DIREÇÃO PEDAGÓGICA E GESTÃO ACADÉMICA', margin + 6, currentY + 6.5);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -135,7 +135,7 @@ export function generateTeacherSchedulePdf(options: TeacherSchedulePdfOptions): 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text(`Vigência: ${period.startDate || '2026-09-01'} a ${period.endDate || '2027-01-31'}`, colRightX, currentY + 11.5);
+  doc.text(`Vigência: ${period.startDate || '2026-03-02'} a ${period.endDate || '2026-08-07'}${period.weeksCount ? ` (${period.weeksCount} semanas)` : ''}`, colRightX, currentY + 11.5);
 
   const statusColor = isOverloaded ? [225, 29, 72] : [16, 185, 129];
   doc.setFont('helvetica', 'bold');
@@ -149,16 +149,40 @@ export function generateTeacherSchedulePdf(options: TeacherSchedulePdfOptions): 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(primaryNavy[0], primaryNavy[1], primaryNavy[2]);
-    doc.text('GRADE HORÁRIA SEMANAL DO DOCENTE', margin, currentY + 2);
+    doc.text('GRADE HORÁRIA SEMANAL DO DOCENTE (Turnos da Manhã e Tarde com Intervalos de 15 min)', margin, currentY + 2);
     currentY += 4;
 
     const days = DAYS_OF_WEEK; // ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']
-    const timeSlots = TIME_SLOTS; // ['08:00-10:00', '10:00-12:00', '14:00-16:00', '16:00-18:00', '18:00-20:00']
+    const timeSlots = TIME_SLOTS;
 
     const gridHead = [['Horário', ...days.map(d => `${d}-feira`)]];
-    const gridBody = timeSlots.map(slot => {
+    const gridBody: string[][] = [];
+
+    timeSlots.forEach(slot => {
+      // Official morning break after 3rd period (09:30-09:45)
+      if (slot === '09:45-10:35') {
+        gridBody.push([
+          '09:30-09:45',
+          '☕ INTERVALO OFICIAL DA MANHÃ (15 MIN)',
+          '☕ INTERVALO',
+          '☕ INTERVALO',
+          '☕ INTERVALO',
+          '☕ INTERVALO'
+        ]);
+      }
+      // Official afternoon break after 3rd period (14:30-14:45)
+      if (slot === '14:45-15:35') {
+        gridBody.push([
+          '14:30-14:45',
+          '☕ INTERVALO OFICIAL DA TARDE (15 MIN)',
+          '☕ INTERVALO',
+          '☕ INTERVALO',
+          '☕ INTERVALO',
+          '☕ INTERVALO'
+        ]);
+      }
+
       const [slotStart, slotEnd] = slot.split('-');
-      
       const row = [slot];
       for (const day of days) {
         // Find matching schedule item
@@ -178,7 +202,7 @@ export function generateTeacherSchedulePdf(options: TeacherSchedulePdfOptions): 
           row.push('---');
         }
       }
-      return row;
+      gridBody.push(row);
     });
 
     autoTable(doc, {
@@ -187,8 +211,8 @@ export function generateTeacherSchedulePdf(options: TeacherSchedulePdfOptions): 
       body: gridBody,
       theme: 'grid',
       styles: {
-        fontSize: orientation === 'landscape' ? 7.5 : 6.5,
-        cellPadding: orientation === 'landscape' ? 2 : 1.5,
+        fontSize: orientation === 'landscape' ? 6.5 : 5.5,
+        cellPadding: orientation === 'landscape' ? 1.5 : 1,
         valign: 'middle',
         overflow: 'linebreak',
         textColor: [30, 41, 59],
@@ -210,6 +234,18 @@ export function generateTeacherSchedulePdf(options: TeacherSchedulePdfOptions): 
         },
       },
       didParseCell: function(data) {
+        const rowFirstCell = String((data.row.raw as any)?.[0] || '');
+        const isBreak = rowFirstCell === '09:30-09:45' || rowFirstCell === '14:30-14:45';
+
+        if (isBreak) {
+          data.cell.styles.fillColor = [254, 243, 199]; // Amber
+          data.cell.styles.textColor = [120, 53, 15];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.halign = 'center';
+          data.cell.styles.fontSize = orientation === 'landscape' ? 6.5 : 5.5;
+          return;
+        }
+
         if (data.section === 'body' && data.column.index > 0) {
           const text = String(data.cell.raw || '');
           if (text !== '---') {
@@ -391,7 +427,7 @@ export function generateTeacherSchedulePdf(options: TeacherSchedulePdfOptions): 
     doc.setFontSize(7);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Universidade Tobas • SGHD - Horário Individual de Docente (${teacher.name}) • Página ${i} de ${totalPages}`,
+      `Universidade Licungo • SGHD - Horário Individual de Docente (${teacher.name}) • Página ${i} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 5,
       { align: 'center' }

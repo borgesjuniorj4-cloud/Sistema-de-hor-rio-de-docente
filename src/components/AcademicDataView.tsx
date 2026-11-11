@@ -668,6 +668,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                 <th className="py-3 px-4">Semestre</th>
                 <th className="py-3 px-4">Data Início</th>
                 <th className="py-3 px-4">Data Fim</th>
+                <th className="py-3 px-4">Validade</th>
                 <th className="py-3 px-4">Período Atual</th>
                 <th className="py-3 px-4">Estado</th>
                 {canEdit && <th className="py-3 px-4 text-right">Ações</th>}
@@ -678,8 +679,13 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                 <tr key={period.id} className="hover:bg-slate-50">
                   <td className="py-3 px-4 font-mono font-bold text-slate-800">{period.academicYear}</td>
                   <td className="py-3 px-4 font-semibold text-slate-900">{period.semester}</td>
-                  <td className="py-3 px-4 text-slate-600">{period.startDate}</td>
-                  <td className="py-3 px-4 text-slate-600">{period.endDate}</td>
+                  <td className="py-3 px-4 text-slate-600 font-mono">{period.startDate}</td>
+                  <td className="py-3 px-4 text-slate-600 font-mono">{period.endDate}</td>
+                  <td className="py-3 px-4">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {period.weeksCount ? `${period.weeksCount} semanas` : period.semester.includes('1') ? '16 semanas' : '15 semanas'}
+                    </span>
+                  </td>
                   <td className="py-3 px-4">
                     {period.isCurrent ? (
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 w-fit">
@@ -698,7 +704,8 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => { setEditingItem(period); setPeriodForm(period); setModalType('periods'); }}
-                        className="p-1 hover:bg-slate-100 text-slate-500 rounded"
+                        className="p-1 hover:bg-slate-100 text-slate-500 rounded cursor-pointer"
+                        title="Editar Período"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
@@ -1079,7 +1086,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
 
               {modalType === 'periods' && (
                 <>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="block font-semibold mb-1">Ano Lectivo</label>
                       <input type="text" required value={periodForm.academicYear || '2026'} onChange={e => setPeriodForm({ ...periodForm, academicYear: e.target.value })} className="w-full border rounded p-2" />
@@ -1090,6 +1097,17 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                         <option value="1.º Semestre">1.º Semestre</option>
                         <option value="2.º Semestre">2.º Semestre</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold mb-1">Validade (Semanas)</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="24"
+                        value={periodForm.weeksCount || (periodForm.semester?.includes('1') ? 16 : 15)} 
+                        onChange={e => setPeriodForm({ ...periodForm, weeksCount: Number(e.target.value) })} 
+                        className="w-full border rounded p-2 font-mono font-bold" 
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1104,7 +1122,7 @@ export const AcademicDataView: React.FC<AcademicDataViewProps> = ({
                   </div>
                   <div className="flex items-center gap-2 pt-2">
                     <input type="checkbox" id="chk-current" checked={periodForm.isCurrent || false} onChange={e => setPeriodForm({ ...periodForm, isCurrent: e.target.checked })} className="rounded" />
-                    <label htmlFor="chk-current" className="font-semibold">Definir como Período Vigente</label>
+                    <label htmlFor="chk-current" className="font-semibold">Definir como Período Vigente (1.º Semestre)</label>
                   </div>
                 </>
               )}
